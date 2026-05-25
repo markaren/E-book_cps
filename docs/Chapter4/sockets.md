@@ -165,7 +165,7 @@ Start the server in one terminal, run the client in another, and the client prin
 
 Raw sockets move *bytes*. But your program thinks in *objects* — a sensor reading, a command, a pose. Two jobs sit between the two:
 
-1. **Serialization** turns an object into a well-defined sequence of bytes and back, so both ends agree on the meaning. That is the [next-but-one chapter](serialization.md).
+1. **Serialization** turns an object into a well-defined sequence of bytes and back, so both ends agree on the meaning. That is the [Serialization](serialization.md) chapter.
 2. A **networking library** removes the boilerplate above and adds asynchronous I/O so one thread can service many connections. That is [Networking in C++](networking.md).
 
 On top of those, higher-level protocols give you ready-made conversation patterns: [Modbus](modbus.md) for industrial devices, and [MQTT and RPC](mqtt_rpc.md) for publish/subscribe and remote calls.
