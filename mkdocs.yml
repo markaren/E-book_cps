@@ -1,0 +1,202 @@
+site_name: AIS2203 E-book
+site_description: Course e-book for AIS2203 — Computer Engineering for Cyber-Physical Systems
+site_url: https://markaren.github.io/E-book_cps/
+repo_url: https://github.com/markaren/E-book_cps
+repo_name: markaren/E-book_cps
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: nb
+          name: Norsk (bokmål)
+          build: true
+          nav_translations:
+            Home: Hjem
+            Getting Started: Kom i gang
+            From AIS1003 to AIS2203: Fra AIS1003 til AIS2203
+            "1. Modern C++ Toolkit": "1. Moderne C++-verktøykasse"
+            Ownership & RAII: Eierskap og RAII
+            Move Semantics: Flyttesemantikk
+            Smart Pointers: Smartpekere
+            Templates & Generic Code: Maler og generisk kode
+            Lambdas & std::function: Lambda-uttrykk og std::function
+            Time with std::chrono: Tid med std::chrono
+            Exercises: Oppgaver
+            "2. Concurrency Fundamentals": "2. Grunnleggende samtidighet"
+            Processes & Threads: Prosesser og tråder
+            Creating Threads: Opprette tråder
+            Sharing Data: Deling av data
+            Condition Variables: Tilstandsvariabler
+            Atomics: Atomære operasjoner
+            "3. Asynchronous & Real-Time": "3. Asynkront og sanntid"
+            Futures & Promises: Futures og promises
+            Thread Pools: Trådbasseng
+            Parallel Algorithms: Parallelle algoritmer
+            Coroutines: Korutiner
+            Real-Time & Timing: Sanntid og tidsstyring
+            "4. Data Communication": "4. Datakommunikasjon"
+            Serialization: Serialisering
+            "Sockets, TCP & UDP": "Sockets, TCP og UDP"
+            Networking in C++: Nettverk i C++
+            Serial Communication: Seriekommunikasjon
+            MQTT & RPC: MQTT og RPC
+            "5. Embedded Linux": "5. Embedded Linux"
+            Why Embedded Linux: Hvorfor embedded Linux
+            Cross-Compiling for the Pi: Krysskompilering for Pi-en
+            GPIO & Buses: GPIO og busser
+            Deploying & systemd: Utrulling og systemd
+            "6. Building Larger Projects": "6. Bygge større prosjekter"
+            CMake for Multi-Target Projects: CMake for prosjekter med flere mål
+            Dependencies with vcpkg: Avhengigheter med vcpkg
+            Calling C++ from Python: Kalle C++ fra Python
+            Reference: Referanse
+            Debugging Concurrent Programs: Feilsøke samtidige programmer
+            Portability: Portabilitet
+            Using AI for Coding: Bruke KI til koding
+            Common Terms: Vanlige begreper
+            FAQ: Ofte stilte spørsmål
+
+hooks:
+  - hooks/compiler_explorer.py
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/spoiler.js
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting_started.md
+    - From AIS1003 to AIS2203: from_ais1003.md
+  - 1. Modern C++ Toolkit:
+    - Ownership & RAII: Chapter1/ownership.md
+    - Move Semantics: Chapter1/move_semantics.md
+    - Smart Pointers: Chapter1/smart_pointers.md
+    - Templates & Generic Code: Chapter1/templates.md
+    - Lambdas & std::function: Chapter1/lambdas.md
+    - Time with std::chrono: Chapter1/chrono.md
+    - Exercises: Chapter1/exercises.md
+  - 2. Concurrency Fundamentals:
+    - Processes & Threads: Chapter2/processes_threads.md
+    - Creating Threads: Chapter2/threads.md
+    - Sharing Data: Chapter2/sharing_data.md
+    - Condition Variables: Chapter2/condition_variables.md
+    - Atomics: Chapter2/atomics.md
+    - Exercises: Chapter2/exercises.md
+  - 3. Asynchronous & Real-Time:
+    - Futures & Promises: Chapter3/futures.md
+    - Thread Pools: Chapter3/thread_pools.md
+    - Parallel Algorithms: Chapter3/parallel_algorithms.md
+    - Coroutines: Chapter3/coroutines.md
+    - Real-Time & Timing: Chapter3/real_time.md
+    - Exercises: Chapter3/exercises.md
+  - 4. Data Communication:
+    - Serialization: Chapter4/serialization.md
+    - Sockets, TCP & UDP: Chapter4/sockets.md
+    - Networking in C++: Chapter4/networking.md
+    - Serial Communication: Chapter4/serial.md
+    - Modbus: Chapter4/modbus.md
+    - MQTT & RPC: Chapter4/mqtt_rpc.md
+    - Exercises: Chapter4/exercises.md
+  - 5. Embedded Linux:
+    - Why Embedded Linux: Chapter5/intro.md
+    - Cross-Compiling for the Pi: Chapter5/cross_compiling.md
+    - GPIO & Buses: Chapter5/gpio.md
+    - Deploying & systemd: Chapter5/deploy.md
+    - Exercises: Chapter5/exercises.md
+  - 6. Building Larger Projects:
+    - CMake for Multi-Target Projects: Chapter6/cmake.md
+    - Dependencies with vcpkg: Chapter6/dependencies.md
+    - Calling C++ from Python: Chapter6/python_interop.md
+    - Exercises: Chapter6/exercises.md
+  - Reference:
+    - Debugging Concurrent Programs: debugging_concurrency.md
+    - Portability: portability.md
+    - Using AI for Coding: using_ai.md
+    - Common Terms: terms.md
+    - FAQ: faq.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/markaren/E-book_cps
+  generator: false
+
+copyright: >
+  Released under the MIT License.
