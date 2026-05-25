@@ -44,7 +44,7 @@ When a device *can* share a clock wire — typically a sensor sitting on the sam
 - **I²C** (Inter-Integrated Circuit) — a two-wire, multi-master, multi-slave bus: **SDA** (data) and **SCL** (clock). Each device has an address, so many sensors share the same two wires. Common for low-speed peripherals (sensors, small displays). On Arduino it is the `Wire` library.
 - **SPI** (Serial Peripheral Interface) — faster, but uses more wires (clock, two data lines, and a select line per device). Common for displays, SD cards, fast sensors.
 
-You meet I²C and SPI again in [GPIO & Buses](../Chapter5/gpio.md), driving them from user-space Linux on the Pi.
+The [Embedded Linux](../embedded_linux.md) reference covers driving I²C and SPI from user-space Linux.
 
 ---
 
@@ -99,6 +99,6 @@ The shared lesson: both are byte streams, so a [serialization format](serializat
 
 - **Serial** sends data one bit at a time over **TX/RX** lines; **full-duplex** is simultaneous two-way, **half-duplex** one direction at a time.
 - **Asynchronous** serial (**UART**, **RS-232**) has no clock, so both ends must agree on the **baud rate** and frame format (e.g. **8N1**); each byte is wrapped in a **start bit, data bits (LSB first), optional parity, and stop bit(s)**.
-- **Synchronous** serial (**I²C** with SDA/SCL, **SPI**) uses a clock wire for higher speed; common for on-board sensors and revisited in [GPIO & Buses](../Chapter5/gpio.md).
+- **Synchronous** serial (**I²C** with SDA/SCL, **SPI**) uses a clock wire for higher speed; common for on-board sensors (see the [Embedded Linux](../embedded_linux.md) reference).
 - C++ has **no standard serial** — use **Boost.Asio**'s `serial_port` or a small serial library (pySerial on the Python side). Set the baud to match, and **frame** messages yourself (a `'\n'` or length prefix), because serial is a boundary-less byte stream like [TCP](sockets.md).
 - The classic use is a PC/Pi reading `sensor,value\n` lines from an Arduino and [deserializing](serialization.md) them. Next: [Modbus](modbus.md), an industrial protocol that runs over both serial (RTU) and TCP.

@@ -22,8 +22,10 @@ The book follows the arc of the course:
 | **2. Concurrency Fundamentals** | Processes and threads, race conditions, mutexes, condition variables and atomics — sharing data without corrupting it. |
 | **3. Asynchronous & Real-Time** | Futures, thread pools, parallel algorithms, coroutines, and meeting deadlines in a real-time system. |
 | **4. Data Communication** | Serialization, sockets, TCP/UDP, serial lines, Modbus, and higher-level patterns like MQTT and RPC. |
-| **5. Embedded Linux** | Cross-compiling for a Raspberry Pi, driving GPIO and buses from Linux, and deploying your program as a service. |
-| **6. Building Larger Projects** | Multi-target CMake, third-party dependencies with vcpkg, and bridging C++ with Python. |
+| **5. Building Larger Projects** | Multi-target CMake, third-party dependencies with vcpkg, and bridging C++ with Python. |
+| **6. Computer Vision** | OpenCV in C++, camera calibration, deep vision and YOLO, on-device model deployment with ONNX, and virtual environments. |
+
+The **Reference** section collects standalone topics, including **Embedded Linux** — cross-compiling for a Raspberry Pi, driving GPIO and buses from Linux, and deploying your program as a service — alongside debugging, portability, and a glossary.
 
 Each chapter ends with **exercises**. As in AIS1003, the solutions are blurred — try each one honestly before revealing the answer. Type the code into CLion and run it; reading is not the same as knowing.
 

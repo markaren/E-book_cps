@@ -57,9 +57,9 @@ You will learn to think about deadlines, latency and jitter, to run periodic tas
 
 ---
 
-## A new target: embedded Linux
+## Where the code runs
 
-AIS1003 mentioned Arduino — a microcontroller with no operating system, where your code *is* the whole show. AIS2203 adds a middle ground that runs much of the robotics world: **embedded Linux**, on boards like the Raspberry Pi.
+AIS1003 mentioned Arduino — a microcontroller with no operating system, where your code *is* the whole show. Much of the robotics world instead runs on **embedded Linux**, on boards like the Raspberry Pi — a middle ground between the Arduino and a desktop PC:
 
 | | Arduino (bare metal) | Embedded Linux (Pi) | Desktop PC |
 |---|---|---|---|
@@ -68,7 +68,7 @@ AIS1003 mentioned Arduino — a microcontroller with no operating system, where 
 | Networking | Add-on shields | Built-in | Built-in |
 | Your program | The only thing running | One process among many | One process among many |
 
-The Pi runs the *same* C++ and the *same* standard library you use on your laptop — so almost everything in this book runs there too. [Part 5](Chapter5/intro.md) covers the differences that remain: cross-compiling, driving hardware pins, and deploying your program as a background service.
+This year the project runs in a **3D simulator** on your PC rather than on real hardware, so you write and test everything on your desktop. The table still matters, though: a Pi runs the *same* C++ and standard library as your laptop, so the code you write for the simulated robot is the code a real one would run. The [Embedded Linux](embedded_linux.md) reference covers what deploying to actual hardware would involve — cross-compiling, hardware pins, running as a service — as background for when you leave the simulator.
 
 ---
 

@@ -22,7 +22,7 @@ flowchart LR
 
 That indirection is the whole point: publishers and subscribers are **decoupled** — they never address each other, only topics. The benefits map directly onto robotics and IoT:
 
-- **Low footprint and bandwidth** — ideal for a constrained device like a Raspberry Pi Zero ([Embedded Linux](../Chapter5/intro.md)).
+- **Low footprint and bandwidth** — ideal for a constrained device like a Raspberry Pi Zero ([Embedded Linux](../embedded_linux.md)).
 - **Many-to-many** — several dashboards can watch the same robot, and one dashboard can watch many robots, with no extra work on the robot.
 - **Reaches awkward networks** — a robot behind a firewall or on cellular cannot easily run a reachable server, but it *can* connect *outward* to a known broker; clients meet it there. You connect to a known hostname instead of chasing a robot's changing IP.
 
@@ -103,4 +103,4 @@ A useful way to decide: if you are **broadcasting state** that any number of con
 - **MQTT** routes messages through a central **broker** by **topic**; publishers and subscribers are **decoupled**. It is lightweight, many-to-many, and reaches constrained or firewalled devices — ideal for IoT telemetry. Use Mosquitto + Paho; messages are still [serialized](serialization.md) (often JSON).
 - **RPC** lets you **call a remote function like a local one**: define an interface, generate client/server code, implement and call. **gRPC** (HTTP/2, streaming, `.proto`/[Protocol Buffers](serialization.md)) is the modern default; **Thrift** is the older equivalent.
 - Choose by intent: **MQTT** to broadcast state to many consumers, **RPC** to invoke an operation and get a result, **raw sockets + JSON** when you control both ends and want simplicity.
-- This completes the data-communication toolkit — [serialization](serialization.md), [sockets](sockets.md), [networking libraries](networking.md), [serial](serial.md), [Modbus](modbus.md), and these patterns. Try the [exercises](exercises.md), then [Part 5](../Chapter5/intro.md) puts it all on a real embedded-Linux device.
+- This completes the data-communication toolkit — [serialization](serialization.md), [sockets](sockets.md), [networking libraries](networking.md), [serial](serial.md), [Modbus](modbus.md), and these patterns. Try the [exercises](exercises.md), then the [Embedded Linux](../embedded_linux.md) reference outlines how it would run on real hardware.

@@ -114,15 +114,17 @@ plugins:
             Networking in C++: Nettverk i C++
             Serial Communication: Seriekommunikasjon
             MQTT & RPC: MQTT og RPC
-            "5. Embedded Linux": "5. Embedded Linux"
-            Why Embedded Linux: Hvorfor embedded Linux
-            Cross-Compiling for the Pi: Krysskompilering for Pi-en
-            GPIO & Buses: GPIO og busser
-            Deploying & systemd: Utrulling og systemd
-            "6. Building Larger Projects": "6. Bygge større prosjekter"
+            Embedded Linux: Embedded Linux
+            "5. Building Larger Projects": "5. Bygge større prosjekter"
             CMake for Multi-Target Projects: CMake for prosjekter med flere mål
             Dependencies with vcpkg: Avhengigheter med vcpkg
             Calling C++ from Python: Kalle C++ fra Python
+            "6. Computer Vision": "6. Datasyn"
+            OpenCV in C++: OpenCV i C++
+            Camera Calibration: Kamerakalibrering
+            Deep Vision: Dyp datasyn
+            Model Deployment & ONNX: Modellutrulling og ONNX
+            Virtual Environments: Virtuelle miljøer
             Reference: Referanse
             Debugging Concurrent Programs: Feilsøke samtidige programmer
             Portability: Portabilitet
@@ -174,18 +176,20 @@ nav:
     - Modbus: Chapter4/modbus.md
     - MQTT & RPC: Chapter4/mqtt_rpc.md
     - Exercises: Chapter4/exercises.md
-  - 5. Embedded Linux:
-    - Why Embedded Linux: Chapter5/intro.md
-    - Cross-Compiling for the Pi: Chapter5/cross_compiling.md
-    - GPIO & Buses: Chapter5/gpio.md
-    - Deploying & systemd: Chapter5/deploy.md
-    - Exercises: Chapter5/exercises.md
-  - 6. Building Larger Projects:
+  - 5. Building Larger Projects:
     - CMake for Multi-Target Projects: Chapter6/cmake.md
     - Dependencies with vcpkg: Chapter6/dependencies.md
     - Calling C++ from Python: Chapter6/python_interop.md
     - Exercises: Chapter6/exercises.md
+  - 6. Computer Vision:
+    - OpenCV in C++: Chapter7/opencv.md
+    - Camera Calibration: Chapter7/calibration.md
+    - Deep Vision: Chapter7/deep_vision.md
+    - Model Deployment & ONNX: Chapter7/onnx.md
+    - Virtual Environments: Chapter7/virtual_environments.md
+    - Exercises: Chapter7/exercises.md
   - Reference:
+    - Embedded Linux: embedded_linux.md
     - Debugging Concurrent Programs: debugging_concurrency.md
     - Portability: portability.md
     - Using AI for Coding: using_ai.md

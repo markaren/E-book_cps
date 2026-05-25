@@ -1,6 +1,6 @@
 # Getting Started
 
-AIS2203 uses the same core tools as AIS1003 — **CLion**, **CMake**, and a C++ compiler — so if you finished that course you are most of the way set up. This page covers what is new: the language standard, a few platform details that matter once you start threading, and the Linux environment you will need for [Part 5](Chapter5/intro.md).
+AIS2203 uses the same core tools as AIS1003 — **CLion**, **CMake**, and a C++ compiler — so if you finished that course you are most of the way set up. This page covers what is new: the language standard, a few platform details that matter once you start threading, and an optional Linux environment for the Unix-flavoured examples.
 
 If CLion, CMake or Git are not installed, follow the AIS1003 [Getting Started](https://markaren.github.io/E-book_cpp/getting_started/) guide first, then come back.
 
@@ -47,18 +47,18 @@ target_link_libraries(app PRIVATE Threads::Threads)
 
 ## A Linux environment
 
-Part 5 of this book is about **embedded Linux**, and several communication examples assume a Unix system. You have three good options, in rough order of convenience:
+This year the project runs in a 3D simulator on your desktop, so you do **not** need a Raspberry Pi. A Linux environment is still handy, though — several communication examples are Unix-flavoured, and it makes the [Embedded Linux](embedded_linux.md) background concrete. Three options, in rough order of convenience:
 
 | Option | Good for | Notes |
 |--------|----------|-------|
 | **WSL2** (Windows Subsystem for Linux) | Everyday Linux on a Windows laptop | `wsl --install` from an admin PowerShell, then install `build-essential cmake git`. |
-| **A Raspberry Pi** | The real embedded target | What [Part 5](Chapter5/intro.md) deploys to. A Pi 4 or Pi Zero 2 W is plenty. |
+| **A Raspberry Pi** | Optional real hardware | Not needed this year; only if you want to try the [Embedded Linux](embedded_linux.md) material for real. |
 | **A Linux VM or dual boot** | A full desktop Linux | Heaviest to set up; rarely necessary for this course. |
 
-You do not need all three. WSL2 is enough to follow every chapter except the parts that touch real GPIO pins; for those you want a physical Pi.
+You do not need all three — and you may need none. WSL2 is more than enough to follow every chapter, and on Windows you can build and run the course work directly; pick a Linux option only if you want a Unix shell handy.
 
 !!! tip "CLion talks to all of these"
-    CLion can build and debug on a remote machine over SSH, including WSL2 and a Raspberry Pi, through **Settings → Build, Execution, Deployment → Toolchains**. You edit on your laptop and the compiler runs on Linux. [Cross-Compiling for the Pi](Chapter5/cross_compiling.md) covers the faster alternative — building ARM binaries on your PC.
+    CLion can build and debug on a remote machine over SSH — WSL2 or a Pi — through **Settings → Build, Execution, Deployment → Toolchains**, so you edit on your laptop while the compiler runs on Linux. The [Embedded Linux](embedded_linux.md) reference sketches the rest (cross-compiling, deploying as a service) for when real hardware is in play.
 
 ---
 
