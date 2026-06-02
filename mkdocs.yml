@@ -126,6 +126,7 @@ plugins:
             Reference: Referanse
             Debugging Concurrent Programs: Feilsøke samtidige programmer
             Portability: Portabilitet
+            The Pimpl Idiom: Pimpl-idiomet
             Using AI for Coding: Bruke KI til koding
             Common Terms: Vanlige begreper
             FAQ: Ofte stilte spørsmål
@@ -190,6 +191,7 @@ nav:
     - Embedded Linux: embedded_linux.md
     - Debugging Concurrent Programs: debugging_concurrency.md
     - Portability: portability.md
+    - The Pimpl Idiom: pimpl.md
     - Using AI for Coding: using_ai.md
     - Common Terms: terms.md
     - FAQ: faq.md

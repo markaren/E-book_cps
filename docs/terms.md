@@ -54,6 +54,7 @@ A quick reference for the vocabulary used throughout this book. Each term links 
 | **Lambda** | An inline callable with a capture list. ([Lambdas & std::function](Chapter1/lambdas.md)) |
 | **`std::function`** | A wrapper holding any callable of a given signature. ([Lambdas & std::function](Chapter1/lambdas.md)) |
 | **`std::chrono`** | The library of durations, time points and clocks. ([Time with std::chrono](Chapter1/chrono.md)) |
+| **Pimpl idiom** | Hiding a class's private data behind a `unique_ptr` to an opaque `Impl`, declared in the header and defined in the `.cpp` — a compilation firewall. ([The Pimpl Idiom](pimpl.md)) |
 
 ## Communication
 
