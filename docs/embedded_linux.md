@@ -40,7 +40,7 @@ A microcontroller toggles pins directly; on Linux you are in **user space**, so 
 - **GPIO** (general-purpose I/O pins) — switch an LED, read a button — via the modern `libgpiod` library (or the older sysfs interface).
 - **I²C** and **SPI** — the [synchronous serial buses](Chapter4/serial.md) from the communication chapters — exposed as device files (`/dev/i2c-*`, `/dev/spidev*`) that libraries wrap.
 
-In simulation, "hardware" is a model in the [virtual world](Chapter7/virtual_environments.md): a simulated sensor returns a value, a simulated actuator moves — your control code reads and writes the same abstractions it would on real pins, which is what makes the sim-to-real transition realistic.
+In simulation, "hardware" is a model in the [virtual world](Chapter6/virtual_environments.md): a simulated sensor returns a value, a simulated actuator moves — your control code reads and writes the same abstractions it would on real pins, which is what makes the sim-to-real transition realistic.
 
 ---
 
@@ -57,7 +57,7 @@ This is how a robot's control program runs untended: powered on, the device boot
 
 ## Real-time on Linux
 
-A general-purpose Linux is **not** a hard real-time OS — the scheduler time-slices your program against everything else, so a [control loop](Chapter3/real_time.md) can be delayed unpredictably. For soft and firm deadlines this is usually fine; for tighter ones, Linux offers real-time scheduling priorities (`SCHED_FIFO`), and a `PREEMPT_RT` kernel bounds worst-case latency. The same caveats apply whether the loop drives a real motor or a simulated one — which is another reason the [Real-Time & Timing](Chapter3/real_time.md) material matters even in simulation.
+A general-purpose Linux is **not** a hard real-time OS — the scheduler time-slices your program against everything else, so a [control loop](Chapter3/real_time.md) can be delayed unpredictably. For soft and firm deadlines this is usually fine; for tighter ones, Linux offers real-time scheduling priorities (`SCHED_FIFO`), and the `PREEMPT_RT` real-time support — long a separate patch set, and mainline since Linux 6.12 — bounds worst-case latency. The same caveats apply whether the loop drives a real motor or a simulated one — which is another reason the [Real-Time & Timing](Chapter3/real_time.md) material matters even in simulation.
 
 ---
 

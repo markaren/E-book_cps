@@ -66,6 +66,11 @@ private:
 };
 ```
 
+The **move assignment operator** — `Buffer& operator=(Buffer&&) noexcept` — is analogous: it first releases whatever the destination already owns, then steals the source's internals and nulls the source, and returns `*this`. The constructor above omits it only to keep the example short.
+
+!!! warning "Writing a destructor suppresses the generated moves"
+    Because this `Buffer` declares a destructor, the compiler will **not** generate move operations for it — so without the move constructor shown here, `Buffer` would silently fall back to *copying* (or fail to compile, since the copies are deleted). This is the trap the **rule of five** warns about: declare one of the five special members and you take responsibility for the rest. It is also the strongest argument for the rule of zero — write no destructor, and the moves stay generated for you.
+
 You will rarely write this by hand. As [Ownership & RAII](ownership.md) argued, the **rule of zero** says to build from members that already move correctly — `std::vector`, `std::unique_ptr` — and let the compiler generate the move operations for you. The example above exists to show what those generated operations *do*: take the source's handle, null out the source.
 
 !!! tip "Mark moves `noexcept`"
@@ -75,7 +80,7 @@ You will rarely write this by hand. As [Ownership & RAII](ownership.md) argued, 
 
 ## Move-only types: the concurrency payoff
 
-Some resources are inherently unique, so their types **delete the copy operations** and support only moving. You have already used several:
+Some resources are inherently unique, so their types **delete the copy operations** and support only moving. You already know `std::unique_ptr` from AIS1003; the rest arrive in Parts 2 and 3, but they all share this move-only shape:
 
 | Move-only type | Why it can't be copied |
 |----------------|------------------------|
@@ -101,7 +106,7 @@ int main() {
 }
 ```
 
-The [thread pool](../Chapter3/thread_pools.md) moved a `packaged_task` into its queue; [futures](../Chapter3/futures.md) get stored in a `std::vector<std::future<T>>` by moving; a `std::unique_ptr` is moved into a thread to hand over heap ownership. Every one of those is move semantics doing the work ownership.md described as "transfer."
+The [thread pool](../Chapter3/thread_pools.md) will move a `packaged_task` into its queue; [futures](../Chapter3/futures.md) will be stored in a `std::vector<std::future<T>>` by moving; a `std::unique_ptr` gets moved into a thread to hand over heap ownership. Every one of those is move semantics doing the work [Ownership & RAII](ownership.md) described as "transfer."
 
 ---
 
@@ -144,6 +149,9 @@ std::cout << s;                 // OK now — s has a known value again
 ```
 
 The practical rule: once you have moved from a variable, treat it as empty. Either give it a new value or let it go out of scope. Reading a moved-from object is a classic bug — the value might be empty, might be the old value, might be anything.
+
+!!! note "`unique_ptr` and `shared_ptr` give a stronger guarantee"
+    "Valid but unspecified" is the *general* rule for standard types. The smart pointers promise more: a moved-from `std::unique_ptr` (or `std::shared_ptr`) is guaranteed to be **null**. That is why it is safe — and idiomatic — to check `if (ptr)` right after moving from it, as [Smart Pointers](smart_pointers.md) does to show ownership has transferred. Rely on this only for the smart pointers; for a moved-from `std::string` or `std::vector`, still assume nothing about its contents.
 
 ---
 

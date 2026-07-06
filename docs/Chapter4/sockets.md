@@ -20,7 +20,7 @@ The pair is a **socket address**. The analogy that sticks: the IP address is the
 | Term | Meaning |
 |------|---------|
 | **IP address** | Identifies a host on the network. `127.0.0.1` / `localhost` is the **loopback** — your own machine, useful for testing a client and server on one computer. |
-| **Port** | A 16-bit number (0–65535) identifying one program on a host. Ports below 1024 are *privileged* (e.g. 80 = HTTP, 22 = SSH). Pick something high (e.g. 8080) for your own programs. |
+| **Port** | A 16-bit number (0–65535) identifying one program on a host. Ports below 1024 are *privileged* on Unix-like systems — binding one needs root (e.g. 80 = HTTP, 22 = SSH). Pick something high (e.g. 8080) for your own programs. |
 | **Socket** | The endpoint object your program reads and writes through. |
 
 ---
@@ -59,7 +59,7 @@ The sequence of system calls follows those roles. The names below are the **POSI
 | `close()` | `close()` | Tear the connection down. |
 
 !!! note "C++ has no sockets in its standard library"
-    Unlike Python or Java, the C++ standard library offers **no** networking. You either call the OS API directly — `sys/socket.h` on Linux, **Winsock2** on Windows, and they differ — or, far better, use a cross-platform library that wraps them. The [next chapter](networking.md) covers the libraries this course uses (Boost.Asio and a lightweight wrapper). The raw API below is shown so you understand what those libraries are doing for you, not because you should write it by hand.
+    Unlike Python or Java, the C++ standard library offers **no** networking. You either call the OS API directly — `sys/socket.h` on Linux, **Winsock2** on Windows, and they differ — or, far better, use a cross-platform library that wraps them. [Networking in C++](networking.md) covers the libraries this course uses (Boost.Asio and a lightweight wrapper). The raw API below is shown so you understand what those libraries are doing for you, not because you should write it by hand.
 
 ---
 
@@ -67,7 +67,7 @@ The sequence of system calls follows those roles. The names below are the **POSI
 
 Two programs can talk over one of two transport protocols, and choosing between them is the first design decision of any networked feature.
 
-**TCP** (Transmission Control Protocol) is a **reliable, ordered, connection-oriented byte stream.** It guarantees that every byte you send arrives, exactly once, in the order you sent it — retransmitting anything lost along the way. You open a connection, and from then on it behaves like a two-way pipe.
+**TCP** (Transmission Control Protocol) is a **reliable, ordered, connection-oriented byte stream.** It guarantees that every byte you send arrives, exactly once, in the order you sent it — retransmitting anything lost along the way. The guarantee is *delivered-or-detected*, not unconditional: if the network genuinely fails, TCP does not perform magic — it gives up and reports an error, so you *find out* rather than silently losing data. You open a connection, and from then on it behaves like a two-way pipe.
 
 **UDP** (User Datagram Protocol) sends **independent datagrams with no guarantees.** A datagram may arrive, may not, and several may arrive out of order. There is no connection — you just fire a packet at an address. In exchange for dropping the guarantees, UDP has far less overhead and lower latency.
 
@@ -95,6 +95,9 @@ The rule of thumb:
 
 To make the lifecycle concrete, here is an **echo** service using the raw POSIX API on Linux: the server accepts one client and sends back whatever it receives. This is deliberately stripped of error handling to show the shape; real code checks every return value, and you would normally use a library instead. It will not run on Compiler Explorer (no network), but it runs on Linux and the Pi.
 
+!!! warning "This example is POSIX — run it under WSL2 on Windows"
+    The headers below (`<arpa/inet.h>`, `<unistd.h>`) do not exist on native Windows, so this code will *not* compile in a plain Windows CLion toolchain. Build and run it inside **WSL2** (see [Getting Started](../getting_started.md)), where you have a real Linux. On native Windows the same program is written against **Winsock2** and differs in ways worth knowing: you must call `WSAStartup` at the start and `WSACleanup` at the end; a socket is a `SOCKET` (an unsigned handle) rather than an `int` file descriptor; and you close it with `closesocket`, not `close`. This platform split is precisely why the next pages reach for a [library](networking.md) that hides it — the [SimpleSocket echo pair](networking.md) *does* build and run in CLion on Windows out of the box.
+
 **Server:**
 
 <!-- no-ce -->
@@ -106,6 +109,9 @@ To make the lifecycle concrete, here is an **echo** service using the raw POSIX 
 
 int main() {
     int server = socket(AF_INET, SOCK_STREAM, 0);   // SOCK_STREAM = TCP
+
+    int yes = 1;
+    setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));  // reuse the port right away
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
@@ -157,7 +163,7 @@ int main() {
 }
 ```
 
-Start the server in one terminal, run the client in another, and the client prints `server replied: hello`. Note the recurring details that libraries exist to hide: `htons` to put the port in **network byte order** (big-endian — the agreed order on the wire, see [Serialization](serialization.md)), the `reinterpret_cast` to the generic `sockaddr*`, and the fact that on Windows none of these headers exist and you would include `<winsock2.h>` and call `WSAStartup` first. Writing this by hand, portably, is exactly the chore [Networking in C++](networking.md) removes.
+Start the server in one terminal, run the client in another, and the client prints `server replied: hello`. The `SO_REUSEADDR` option is what lets you *stop and restart the server immediately*: after a socket closes, its port lingers in the kernel's `TIME_WAIT` state for a minute or two, and without this option a fresh `bind` on the same port fails with "Address already in use." Note the other recurring details that libraries exist to hide: `htons` to put the port in **network byte order** (big-endian — the order the protocol *headers* use, though your own payload picks its own order; see [Serialization](serialization.md)), the `reinterpret_cast` to the generic `sockaddr*`, and the fact that on Windows none of these headers exist and you would include `<winsock2.h>` and call `WSAStartup` first. Writing this by hand, portably, is exactly the chore [Networking in C++](networking.md) removes.
 
 ---
 

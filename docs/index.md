@@ -2,7 +2,7 @@
 
 Welcome to the e-book for the course [AIS2203 — Computer Engineering for Cyber-Physical Systems](https://www.ntnu.no/studier/emner/AIS2203#tab=omEmnet).
 
-This book is about making programs do **more than one thing at once**, and making programs on **different machines talk to each other**. Those two ideas — concurrency and communication — are what turn a single-file exercise into a robot that reads its sensors, runs a control loop, streams telemetry to an operator, and reacts to commands: all at the same time, and all on time.
+This book is about making programs do **more than one thing at once**, and making programs on **different machines talk to each other**. Those two ideas — concurrency and communication — are what turn a single-file exercise into a robot that reads its sensors, runs a control loop, streams telemetry to an operator, and reacts to commands: all at the same time, and all on time. The semester project makes this concrete: you build a 3D simulator with physics, a car, and sensors, then connect it to the **ROS2** robot middleware — and present the result at the oral exam.
 
 Use the sidebar to navigate, or jump straight to a topic with the search box above. New here? Start with [Getting Started](getting_started.md), then read [From AIS1003 to AIS2203](from_ais1003.md) to see what this course assumes you already know.
 
@@ -24,6 +24,7 @@ The book follows the arc of the course:
 | **4. Data Communication** | Serialization, sockets, TCP/UDP, serial lines, Modbus, and higher-level patterns like MQTT and RPC. |
 | **5. Building Larger Projects** | Multi-target CMake, third-party dependencies with vcpkg, and bridging C++ with Python. |
 | **6. Computer Vision** | OpenCV in C++, camera calibration, deep vision and YOLO, on-device model deployment with ONNX, and virtual environments. |
+| **7. Robot Middleware: ROS2** | The threepp simulator, then ROS2 — nodes, topics, and QoS as a delta from Part 4 — running on Windows via RoboStack, built in a CLion workspace. |
 
 The **Reference** section collects standalone topics, including **Embedded Linux** — cross-compiling for a Raspberry Pi, driving GPIO and buses from Linux, and deploying your program as a service — alongside debugging, portability, and a glossary.
 

@@ -26,7 +26,7 @@ int main() {
 }
 ```
 
-The predefined units are `nanoseconds`, `microseconds`, `milliseconds`, `seconds`, `minutes`, and `hours`. You get the underlying number with `.count()`, but most of the time you pass the duration around as-is — `sleep_for(100ms)` is clearer and safer than `sleep_for(100)`, because the unit is part of the type and the compiler will not let you confuse milliseconds with seconds.
+The predefined units are `nanoseconds`, `microseconds`, `milliseconds`, `seconds`, `minutes`, and `hours` (C++20 adds `days`, `weeks`, `months`, and `years`, though you will rarely need them for timing). You get the underlying number with `.count()`, but most of the time you pass the duration around as-is — `sleep_for(100ms)` is clearer and safer than `sleep_for(100)`, because the unit is part of the type and the compiler will not let you confuse milliseconds with seconds.
 
 !!! tip "Use the literal suffixes"
     `100ms`, `2s`, `500us`, `1min` read far better than constructing `milliseconds(100)`, and they make the unit unmistakable at the call site. Add `using namespace std::chrono_literals;` in functions that do timing.
@@ -42,7 +42,17 @@ auto secs = duration_cast<seconds>(d);    // 2 seconds — the 500 ms is truncat
 std::cout << secs.count() << "\n";        // 2
 ```
 
-The compiler forcing you to write `duration_cast` for a lossy conversion is a feature: it stops you silently dropping precision. Just remember it truncates toward zero — if you need rounding, do it yourself.
+The compiler forcing you to write `duration_cast` for a lossy conversion is a feature: it stops you silently dropping precision. Just remember it truncates toward zero — if you need *rounding* rather than truncation, use the C++17 conversions `std::chrono::round`, `std::chrono::floor` or `std::chrono::ceil` instead, which spell out how to break the fraction:
+
+```cpp
+using namespace std::chrono;
+round<seconds>(2400ms).count();   // 2 — nearest second
+round<seconds>(2600ms).count();   // 3 — nearest second
+floor<seconds>(2900ms).count();   // 2 — toward negative infinity
+ceil<seconds>(2100ms).count();    // 3 — toward positive infinity
+```
+
+(An exact half like `2500ms` rounds to the nearest *even* second — a detail that rarely matters for timing.)
 
 ---
 
@@ -90,9 +100,9 @@ The rule, restated from [Real-Time & Timing](../Chapter3/real_time.md) because i
 
 ---
 
-## Where you have already seen it
+## Where you will see it
 
-Every timing call in the book is `chrono` underneath:
+Every timing call in the rest of the book is `chrono` underneath:
 
 ```cpp
 std::this_thread::sleep_for(100ms);              // wait a duration
@@ -111,7 +121,7 @@ The predefined durations hold *integers*, so dividing or converting can silently
 
 ```cpp
 auto half = 5s / 2;                       // 2 seconds, not 2.5 — integer division
-auto ms = duration_cast<seconds>(1999ms); // 1 second — truncated
+auto secs = duration_cast<seconds>(1999ms); // 1 second — truncated (not 2)
 ```
 
 For most timing — sleeps, timeouts, periods — integer milliseconds or microseconds are plenty precise and this never bites. If you genuinely need fractional seconds (say, computing a control gain from an elapsed time), use a floating-point duration: `duration<double>` holds seconds as a `double`.

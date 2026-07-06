@@ -128,6 +128,7 @@ Write a loop that runs five cycles at a fixed **50 ms** period using `sleep_unti
 
     Each line prints ≈ 50 ms because `next` advances by exactly one period regardless of how long the cycle's work took. Now contrast the broken version:
 
+    <!-- no-ce -->
     ```cpp
     // Drifts: real period = work time + sleep time, and it accumulates.
     while (cycle < 5) {
@@ -138,6 +139,8 @@ Write a loop that runs five cycles at a fixed **50 ms** period using `sleep_unti
     ```
 
     The naïve loop sleeps the *period* on top of the *work*, so it runs at ~70 ms and falls further behind the longer it runs. Scheduling against absolute deadlines is what keeps a control loop locked to its intended rate — the core real-time pattern.
+
+    On **Windows** do not be surprised if the correct version prints values like `46` or `63` ms rather than a clean `50`: the default sleep granularity is ~15.6 ms, so each `sleep_until` snaps to the next timer tick and the measured deltas jitter by a tick either way (see the [Windows timing note](real_time.md#periodic-tasks-without-drift)). The *pattern is still correct* — `next += period` prevents cumulative drift, so the values scatter around 50 ms without marching steadily upward the way the naïve loop does. To tighten the numbers, raise the timer resolution with `timeBeginPeriod(1)` as that note describes.
 
     </div>
 
@@ -178,6 +181,6 @@ Sum a large vector with `std::reduce` and the `std::execution::par` policy. Fill
     target_link_libraries(app PRIVATE TBB::tbb Threads::Threads)
     ```
 
-    Without TBB the code may compile but run sequentially. Try timing `par` against `seq` with [`steady_clock`](real_time.md): the parallel version wins only once the data is large enough to outweigh the coordination overhead — on ten million elements it should, on a hundred it will not.
+    Without TBB, libstdc++ does not build `<execution>` at all — you get a compile error, not a silent sequential run (in CLion on Windows the default MinGW toolchain hits this; switch to the Visual Studio/MSVC toolchain to get the policies without TBB). Once it builds, try timing `par` against `seq` with [`steady_clock`](real_time.md): the parallel version wins only once the data is large enough to outweigh the coordination overhead — on ten million elements it should, on a hundred it will not.
 
     </div>

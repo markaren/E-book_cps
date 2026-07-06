@@ -4,7 +4,7 @@ Work through these after reading Chapter 1. **Try each one yourself before revea
 
 When you open a solution it appears **blurred** — click it once more to reveal it.
 
-Each program has its own `main()`. None of these need threads, so no special linking — but every one of them is a tool you will reuse in [Part 2](../Chapter2/processes_threads.md) and beyond.
+Each program has its own `main()`. None of these *start* a thread, though exercise 1 uses `std::this_thread::sleep_for` (just to have something to time), so on Linux link `Threads::Threads` as [Getting Started](../getting_started.md#linking-the-thread-library) showed; on Windows it builds as-is. Every one of these is a tool you will reuse in [Part 2](../Chapter2/processes_threads.md) and beyond.
 
 ---
 
@@ -216,5 +216,99 @@ Write a `Button` class that lets callers register click handlers and then "fires
     ```
 
     `std::function<void()>` lets the button store handlers of *different* concrete lambda types in one vector — the [type-erasure](lambdas.md) that callback systems and [thread-pool](../Chapter3/thread_pools.md) task queues rely on. The `[&clicks]` capture is fine because `button` does not outlive `clicks`; if the button (and its stored handlers) lived *longer* than `clicks` — say, returned from this function — that reference would dangle, and you would capture by value or co-own with a [`shared_ptr`](smart_pointers.md) instead. That lifetime question is the heart of using callbacks safely.
+
+    </div>
+
+---
+
+## 5. A cycle that leaks, and the fix
+
+*Practises: [Smart Pointers](smart_pointers.md)*
+
+Write a `Node` struct with a name and a `std::shared_ptr<Node>` to another node, printing in its constructor and destructor. In `main`, create two nodes and point each one's link at the *other*, then let them go out of scope. Run it and notice the destructors **never print** — the two nodes keep each other alive. Then fix the leak by making one of the two links a `std::weak_ptr` and confirm both destructors fire.
+
+> Hint: two `shared_ptr`s pointing at each other form a **cycle** — each holds the other's reference count above zero, so neither ever reaches zero. Break it by making the "back" link a `weak_ptr`, which observes without owning. This is the exact shape of a scene-graph parent link: a parent owns its children with `shared_ptr`, and each child points *back* at its parent with a `weak_ptr` — the pattern you will meet in the [Threepp](https://github.com/markaren/threepp) simulator.
+
+??? success "Show solution"
+
+    <div class="spoiler" markdown title="Click to reveal">
+
+    First, the **broken** version — a cycle that leaks:
+
+    ```cpp
+    #include <iostream>
+    #include <memory>
+    #include <string>
+
+    struct Node {
+        std::string name;
+        std::shared_ptr<Node> other;   // strong link both ways → cycle
+        explicit Node(std::string n) : name(std::move(n)) {
+            std::cout << name << " constructed\n";
+        }
+        ~Node() { std::cout << name << " destroyed\n"; }
+    };
+
+    int main() {
+        {
+            auto a = std::make_shared<Node>("A");
+            auto b = std::make_shared<Node>("B");
+            a->other = b;    // A keeps B alive
+            b->other = a;    // B keeps A alive → neither count reaches 0
+        }   // a and b leave scope — but the two Nodes still co-own each other
+        std::cout << "scope exited\n";
+    }
+    ```
+
+    ```
+    A constructed
+    B constructed
+    scope exited
+    ```
+
+    No `destroyed` lines: both `Node`s leaked. When `a` and `b` go out of scope, each object's count drops from 2 to 1 — the link held by the *other* node keeps it above zero — so neither is ever freed.
+
+    Now the **fix**: make the back-link a `weak_ptr`, which does not raise the count.
+
+    ```cpp
+    #include <iostream>
+    #include <memory>
+    #include <string>
+
+    struct Node {
+        std::string name;
+        std::shared_ptr<Node> child;   // strong: a parent owns its child
+        std::weak_ptr<Node> parent;    // weak: the child only observes its parent
+        explicit Node(std::string n) : name(std::move(n)) {
+            std::cout << name << " constructed\n";
+        }
+        ~Node() { std::cout << name << " destroyed\n"; }
+    };
+
+    int main() {
+        {
+            auto parent = std::make_shared<Node>("parent");
+            auto child  = std::make_shared<Node>("child");
+            parent->child = child;     // strong link down the tree
+            child->parent = parent;    // weak link back up — no cycle
+
+            if (auto p = child->parent.lock()) {   // promote to shared_ptr if alive
+                std::cout << "child sees parent: " << p->name << "\n";
+            }
+        }   // both freed here — no cycle keeps them alive
+        std::cout << "scope exited\n";
+    }
+    ```
+
+    ```
+    parent constructed
+    child constructed
+    child sees parent: parent
+    parent destroyed
+    child destroyed
+    scope exited
+    ```
+
+    Both destructors now run. The `weak_ptr` back-link lets the child *reach* its parent — via `.lock()`, which hands back a `shared_ptr` only while the parent is still alive — without keeping it alive. This is the standard shape of a [scene graph](smart_pointers.md): own **downward** with `shared_ptr`, refer **upward** with `weak_ptr`. Threepp's `Object3D` is built exactly this way.
 
     </div>

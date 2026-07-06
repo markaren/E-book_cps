@@ -240,6 +240,119 @@ Rewrite it so it cannot deadlock, no matter how the threads interleave. Then run
     }
     ```
 
-    `std::scoped_lock` locks all the mutexes you give it as one atomic operation, using an algorithm that never produces the circular wait that causes deadlock — so `aToB` and `bToA` can list the mutexes in whatever order reads naturally and still cooperate. The alternative fix is to make *both* functions lock `mutexA` before `mutexB`; that also works, but relies on every author remembering the convention, while `scoped_lock` makes the safety structural. Either way, you have broken the **circular wait** condition from the chapter.
+    `std::scoped_lock` acquires all the mutexes you give it using a deadlock-avoidance algorithm that never produces the circular wait that causes deadlock — so `aToB` and `bToA` can list the mutexes in whatever order reads naturally and still cooperate. (It is not one *atomic* acquisition — at some instant it may hold one mutex while the other is still free — but it will back off and retry rather than block into a cycle, so no deadlock can form.) The alternative fix is to make *both* functions lock `mutexA` before `mutexB`; that also works, but relies on every author remembering the convention, while `scoped_lock` makes the safety structural. Either way, you have broken the **circular wait** condition from the chapter.
 
     </div>
+
+---
+
+## 5. Fix the stop flag
+
+*Practises: [Atomics](atomics.md)*
+
+This worker is meant to run until `main` tells it to stop. It uses a plain `bool` as the stop flag — and with optimisations on, it may **never stop**: the compiler sees nothing inside the loop changing `running`, so it is allowed to read it once into a register and loop on that forever.
+
+<!-- no-ce -->
+```cpp
+#include <chrono>
+#include <iostream>
+#include <thread>
+
+bool running = true;                 // plain bool — WRONG for cross-thread signalling
+
+int main() {
+    std::jthread worker([] {
+        while (running) {            // may be hoisted to `while (true)` and never re-read
+            // ... work ...
+        }
+        std::cout << "worker stopped\n";
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    running = false;                 // the worker may never observe this
+}
+```
+
+Make the worker reliably stop by changing **one type**. Build with optimisations (`-O2`) to give the bug a chance to show — the plain-`bool` version can spin forever, while the fixed version prints `worker stopped` and exits.
+
+> Hint: the problem is not a torn value (a `bool` write is a single step); it is *visibility* and the optimiser caching the load. `std::atomic<bool>` forces a real memory read each iteration and guarantees the store becomes visible. Change `bool` to `std::atomic<bool>` and include `<atomic>` — nothing else needs to change.
+
+??? success "Show solution"
+
+    <div class="spoiler" markdown title="Click to reveal">
+
+    ```cpp
+    #include <atomic>
+    #include <chrono>
+    #include <iostream>
+    #include <thread>
+
+    std::atomic<bool> running{true};     // atomic: a real load each iteration, writes visible
+
+    int main() {
+        std::jthread worker([] {
+            while (running) {            // genuine atomic load every time round
+                // ... work ...
+            }
+            std::cout << "worker stopped\n";
+        });
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        running = false;                 // atomic store; the worker sees it promptly
+    }
+    ```
+
+    Swapping `bool` for `std::atomic<bool>` fixes two things at once. It stops the compiler from hoisting the load out of the loop — every iteration now re-reads `running` from memory — and it establishes the ordering that makes `main`'s store *visible* to the worker. The plain-`bool` version is not merely slow to notice; it is a **data race**, which is undefined behaviour, so "it happened to work in a debug build" proves nothing. For a `jthread` the even cleaner option is the built-in [`std::stop_token`](threads.md) (`request_stop()`), which needs no flag of your own; reach for `std::atomic<bool>` when the flag lives outside a single `jthread`'s cancellation machinery.
+
+    </div>
+
+---
+
+## 6. A producer/consumer with clean shutdown
+
+*Practises: [Condition Variables](condition_variables.md)*
+
+Use the `ThreadSafeQueue<T>` from [A reusable thread-safe queue](condition_variables.md#a-reusable-thread-safe-queue). In `main`, start one **consumer** thread that loops on `waitAndPop()`, summing the integers it receives. Have the main thread **push** the numbers `1` to `100`, then call `close()`. The consumer must drain everything still queued, exit its loop on the `std::nullopt` that `close()` produces, and print the total — which must be `5050` every run, with no hang and no lost items.
+
+> Hint: `waitAndPop()` returns `std::optional<T>`; loop with `while (auto item = queue.waitAndPop())`, which ends the moment it returns `nullopt`. That `nullopt` only appears once the queue is **closed and drained** — so push all the items, then `close()` exactly once. A `std::jthread` consumer joins automatically at the end of `main`.
+
+??? success "Show solution"
+
+    <div class="spoiler" markdown title="Click to reveal">
+
+    Copy the `ThreadSafeQueue<T>` from the [chapter](condition_variables.md#a-reusable-thread-safe-queue), then:
+
+    ```cpp
+    int main() {
+        ThreadSafeQueue<int> queue;
+
+        std::jthread consumer([&queue] {
+            long long sum = 0;
+            while (auto item = queue.waitAndPop()) {   // nullopt after close() + drain
+                sum += *item;
+            }
+            std::cout << "consumer summed " << sum << " and exited cleanly\n";  // 5050
+        });
+
+        for (int i = 1; i <= 100; ++i) {
+            queue.push(i);
+        }
+        queue.close();     // no more items; consumer drains the rest, then stops
+    }   // consumer's jthread joins here
+    ```
+
+    The consumer never busy-waits: `waitAndPop()` sleeps on the condition variable until an item arrives or the queue closes. Shutdown is race-free because `close()` sets the flag *and* `notify_all()`s under the same discipline as every push — so a consumer blocked in `wait` is guaranteed to wake, drain whatever is left, and only then see the queue empty-and-closed and receive `nullopt`. No item is lost and the thread cannot hang waiting for data that will never come. This is exactly the comms-thread → control-thread hand-off the semester project uses: swap `int` for your command type and the structure is unchanged.
+
+    </div>
+
+---
+
+## Running the concurrency exercises under a sanitizer
+
+Exercise 2 (the thread-safe log) is worth running twice: once as written, and once with the mutex deliberately **removed** so the `push_back`s race. Built with **ThreadSanitizer** the racy version is caught red-handed — TSan prints the two conflicting accesses and their stack traces, turning an invisible timing bug into a concrete report. On WSL2 (or any Linux/Pi toolchain) build with `-fsanitize=thread -g` and run:
+
+```bash
+g++ -std=c++20 -fsanitize=thread -g -pthread log.cpp -o log && ./log
+```
+
+See [Debugging Concurrency](../debugging_concurrency.md) for reading TSan's output and for why it belongs in your regular test runs. (TSan is not available with MinGW on native Windows — use the WSL2 or Linux toolchain, which CLion can target.)

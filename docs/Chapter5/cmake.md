@@ -1,6 +1,6 @@
 # CMake for Multi-Target Projects
 
-In AIS1003 a `CMakeLists.txt` was usually one `add_executable` line. Your AIS2203 project is bigger: a core of [concurrency](../Chapter2/processes_threads.md) and [control](../Chapter3/real_time.md) logic, a [communication](../Chapter4/serialization.md) layer, maybe a [vision](../Chapter7/onnx.md) pipeline, third-party libraries, and tests — all of which want to be built and reused cleanly. This chapter takes CMake from "compile one file" to "organise a real project" around its central idea: **targets**.
+In AIS1003 a `CMakeLists.txt` was usually one `add_executable` line. Your AIS2203 project is bigger: a core of [concurrency](../Chapter2/processes_threads.md) and [control](../Chapter3/real_time.md) logic, a [communication](../Chapter4/serialization.md) layer, maybe a [vision](../Chapter6/onnx.md) pipeline, third-party libraries, and tests — all of which want to be built and reused cleanly. This chapter takes CMake from "compile one file" to "organise a real project" around its central idea: **targets**.
 
 It assumes the CMake basics from the [AIS1003 CMake chapter](https://markaren.github.io/E-book_cpp/Chapter2/cmake_intro/) (configure/build, `add_executable`, `CMAKE_CXX_STANDARD`).
 
@@ -60,7 +60,7 @@ Getting this right keeps your build honest: a `PRIVATE` dependency stays an impl
 
 ## Adding a test target
 
-Tests are just another executable that links your library — which is exactly why you split the logic into a library in the first place: the app *and* the tests can both link `robot_core` and exercise the same code. Pull in a test framework with **`FetchContent`**, which downloads and builds a dependency at configure time:
+Tests are just another executable that links your library — which is exactly why you split the logic into a library in the first place: the app *and* the tests can both link `robot_core` and exercise the same code. Pull in a test framework with **`FetchContent`**, which downloads a dependency's source at configure time and compiles it as part of your build:
 
 ```cmake
 include(FetchContent)
@@ -77,7 +77,7 @@ enable_testing()
 add_test(NAME unit COMMAND tests)        # so `ctest` runs it
 ```
 
-Now `robot_core`, `robot_app`, and `tests` are three targets in one tree: the library holds the logic, the app runs it, the tests check it. `FetchContent` is convenient for a single test dependency; for application libraries you will usually prefer [vcpkg](dependencies.md), the next chapter.
+Now `robot_core`, `robot_app`, and `tests` are three targets in one tree: the library holds the logic, the app runs it, the tests check it. `FetchContent` is convenient for a single test dependency; for application libraries you will usually prefer [vcpkg](dependencies.md), the next chapter. The two happily **coexist in one project** — you can pull a library like threepp with `FetchContent` while `find_package`-ing your vcpkg dependencies in the same `CMakeLists.txt`, as long as each library has only one of them as its source.
 
 ---
 
@@ -100,6 +100,37 @@ robot/
 ```
 
 The split mirrors the visibility idea physically: `include/` holds the **public** interface (the directory you mark `PUBLIC`), while `src/` holds the implementation. Consumers see only `include/`.
+
+---
+
+## Splitting across directories with `add_subdirectory`
+
+As a project grows past a handful of targets, one `CMakeLists.txt` becomes unwieldy. `add_subdirectory` lets each component keep its **own** `CMakeLists.txt` in its own folder, while a small top-level file stitches them together:
+
+```
+robot/
+├── CMakeLists.txt          # top level: project(), then add_subdirectory each part
+├── core/
+│   ├── CMakeLists.txt       # defines the robot_core library
+│   └── ...
+├── app/
+│   ├── CMakeLists.txt       # defines robot_app, links robot_core
+│   └── ...
+└── tests/
+    └── CMakeLists.txt       # defines tests, links robot_core
+```
+
+```cmake
+# top-level CMakeLists.txt
+cmake_minimum_required(VERSION 3.16)
+project(robot CXX)
+
+add_subdirectory(core)      # brings in the robot_core target
+add_subdirectory(app)       # brings in robot_app
+add_subdirectory(tests)     # brings in tests
+```
+
+A target defined in one subdirectory (say `robot_core` in `core/`) is **visible to the others**, so `app/CMakeLists.txt` can `target_link_libraries(robot_app PRIVATE robot_core)` even though the library is declared in a sibling folder. This keeps each component's build rules next to its code, and it is the exact structure a **ROS2 workspace** uses — one package per directory, assembled at the top — which the course meets later in Part 7.
 
 ---
 

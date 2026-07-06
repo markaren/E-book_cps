@@ -44,7 +44,19 @@ client.onMessage([](const std::string& topic, const std::string& payload) {
 });
 ```
 
-Run a broker like **Mosquitto**; on the C++ side use **Eclipse Paho** or `mqtt_cpp`. MQTT carries *messages* (which you still [serialize](serialization.md) — often as JSON), and because it is message-based it preserves boundaries for you, so no framing is needed.
+Run a broker like **Mosquitto**; on the C++ side, [SimpleSocket](networking.md) bundles an MQTT client (enable it with the `SIMPLE_SOCKET_WITH_MQTT` build flag) — the consistent choice if you are already using it for sockets and Modbus. As a standalone option, **Eclipse Paho** is the established, well-supported C++ MQTT library. MQTT carries *messages* (which you still [serialize](serialization.md) — often as JSON), and because it is message-based it preserves boundaries for you, so no framing is needed.
+
+!!! note "Where you'll meet this again: ROS 2"
+    Almost every idea on this page reappears in **[robot middleware](../Chapter7/ros2_concepts.md)**, just under different names — so learning it here is learning ROS 2's plumbing in advance:
+
+    | Here (MQTT / RPC) | In ROS 2 |
+    |-------------------|----------|
+    | MQTT **topics** (publish/subscribe) | ROS 2 **topics** — the same pub/sub shape |
+    | A central **broker** all messages pass through | **Brokerless** peer discovery over DDS — no central point |
+    | MQTT **QoS 0/1/2** | **DDS QoS** policies (reliability, history, durability, …) |
+    | `.proto` + `protoc` code generation | `.msg`/IDL definitions with ROS 2's code generation |
+
+    The biggest conceptual shift is the middle row: MQTT routes everything through one broker, whereas ROS 2's DDS layer has nodes discover each other directly. The rest is the same messaging vocabulary you already have.
 
 ---
 
@@ -63,6 +75,8 @@ The workflow is the same for every RPC framework:
 **gRPC** (from Google) is the modern default. It runs over **HTTP/2**, supports **streaming** (a call can return a stream of messages, not just one reply), and has idiomatic libraries in a dozen languages. Interfaces are defined in **`.proto`** files using [Protocol Buffers](serialization.md) — the binary serialization format — and the `protoc` compiler generates the code:
 
 ```proto
+syntax = "proto3";
+
 // robot.proto — the contract both ends share
 service Robot {
     rpc GetStatus(StatusRequest) returns (StatusReply);
@@ -73,11 +87,7 @@ message StatusRequest {}
 message StatusReply { double battery = 1; bool armed = 2; }
 ```
 
-From this, gRPC generates a `Robot` client you call like an object and a server base class you fill in. A Python dashboard and a C++ controller generated from the *same* `.proto` interoperate automatically — the contract is the single source of truth.
-
-### Thrift
-
-**Apache Thrift** is the older cross-platform RPC framework, conceptually the same: you write a `.thrift` IDL file, run the Thrift compiler, and get client/server code in any of many supported languages. Choosing between Thrift and gRPC mostly comes down to ecosystem and language support; **gRPC** is the more common modern choice, largely for its HTTP/2 streaming and momentum.
+From this, gRPC generates a `Robot` client you call like an object and a server base class you fill in. A Python dashboard and a C++ controller generated from the *same* `.proto` interoperate automatically — the contract is the single source of truth. (**Apache Thrift** is the older, conceptually identical alternative — a `.thrift` IDL and its own compiler — but gRPC is the more common modern choice for its HTTP/2 streaming and momentum.)
 
 ---
 

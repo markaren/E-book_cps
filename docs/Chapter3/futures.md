@@ -20,7 +20,8 @@ int slowSquare(int x) {
 }
 
 int main() {
-    std::future<int> result = std::async(slowSquare, 7);
+    // std::launch::async forces it onto a new thread now — see "Launch policies" below.
+    std::future<int> result = std::async(std::launch::async, slowSquare, 7);
 
     std::cout << "doing other work while it computes...\n";
 
@@ -29,10 +30,10 @@ int main() {
 }
 ```
 
-The shape is the whole point: you launch the work, carry on doing something else, and only block at the moment you actually need the answer. No manual thread, no `join()`, no shared variable to guard — the future *is* the communication channel.
+The shape is the whole point: you launch the work, carry on doing something else, and only block at the moment you actually need the answer. No manual thread, no `join()`, no shared variable to guard — the future *is* the communication channel. (We pass `std::launch::async` explicitly so the work genuinely runs on another thread; the very next section explains why the default would *not* guarantee that.)
 
 !!! warning "`get()` can be called only once"
-    A `std::future` delivers its result exactly once. After `result.get()`, the future is empty (`valid()` becomes `false`) and calling `get()` again is undefined behaviour. Store the value in a variable if you need it more than once — or use a `std::shared_future` (below) when several places must read the same result.
+    A `std::future` delivers its result exactly once. After `result.get()`, the future is empty (`valid()` becomes `false`) and calling `get()` again is undefined behaviour. Store the value in a variable if you need it more than once — or convert the future into a `std::shared_future` with `.share()` (below) when several places must read the same result.
 
 ### Launch policies
 
@@ -41,7 +42,7 @@ The shape is the whole point: you launch the work, carry on doing something else
 | Policy | Meaning |
 |--------|---------|
 | `std::launch::async` | Run **now**, on a new thread. |
-| `std::launch::deferred` | Run **lazily** — the function does not execute until you call `.get()`, and then it runs on *this* thread. |
+| `std::launch::deferred` | Run **lazily** — the function does not execute until you call `.get()` (or `.wait()`), and then it runs synchronously on *this* thread. |
 | default (both) | The implementation chooses either. |
 
 If you actually want concurrency, ask for it explicitly — `std::async(std::launch::async, slowSquare, 7)` — because the default is allowed to defer, in which case nothing runs in parallel at all.
@@ -140,7 +141,7 @@ The task is *moved* onto the thread (a `packaged_task` cannot be copied — it o
 | `std::async` | You have a function, you want its result later, and you do not care which thread runs it. The everyday choice. |
 | `std::promise` / `std::future` | The result is produced somewhere that is not a clean function return — a callback, an event handler, one thread signalling another. |
 | `std::packaged_task` | You want to package work now and let *something else* (a pool, a queue) run it later, while you keep the future. |
-| `std::shared_future` | **Several** consumers must each read the same result. A normal `future` allows only one `get()`; copy it into a `shared_future` to fan the value out. |
+| `std::shared_future` | **Several** consumers must each read the same result. A normal `future` is move-only and allows only one `get()`; call `fut.share()` to convert it into a `shared_future`, which is **copyable** and whose `get()` may be called many times (and from many threads). |
 
 ---
 

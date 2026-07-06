@@ -75,7 +75,7 @@ int main() {
 }
 ```
 
-Install it via [vcpkg](../Chapter6/dependencies.md) (`vcpkg install nlohmann-json`). For binary, protobuf and FlatBuffers each provide a compiler that generates C++ (and Python, Java, …) types from a schema file — the same code-generation idea you will see with [gRPC](mqtt_rpc.md).
+Install it via vcpkg (`vcpkg install nlohmann-json`) — the package manager [Part 5 shows how to set up](../Chapter5/dependencies.md). For binary, protobuf and FlatBuffers each provide a compiler that generates C++ (and Python, Java, …) types from a schema file — the same code-generation idea you will see with [gRPC](mqtt_rpc.md).
 
 To see the round-trip without any dependency, here is a hand-written text serializer — exactly the kind of thing a real format does for you, shown so the concept is concrete:
 
@@ -121,7 +121,7 @@ send(sock, &r, sizeof(r), 0);     // DON'T: not portable
 
 This appears to work between two identical machines and then fails the moment the ends differ, for two reasons:
 
-- **Endianness** — the *byte order* of multi-byte numbers. Big-endian machines store the most significant byte first; little-endian (x86, most ARM) store it last. The agreed order *on the wire* is **big-endian**, called **network byte order** — which is why [sockets](sockets.md) use `htons`/`htonl` to convert, and why [Modbus](modbus.md) registers are big-endian. Send raw little-endian bytes to a big-endian reader and `42` becomes `704643072`.
+- **Endianness** — the *byte order* of multi-byte numbers. Big-endian machines store the most significant byte first; little-endian (x86, most ARM) store it last. Send raw little-endian bytes to a big-endian reader and `42` becomes `704643072`. There is no single universal wire order: **protocol headers** use big-endian, called **network byte order** — which is why [sockets](sockets.md) use `htons`/`htonl` and why [Modbus](modbus.md) registers are big-endian — but a serialization format defines *its own* byte order (protobuf and FlatBuffers are little-endian; DDS/CDR, the substrate under ROS 2, carries an endianness flag in each message). The point is not "always big-endian" but that the order must be **defined and agreed**, not left to whatever the sender's CPU happens to use.
 - **Struct layout** — the compiler inserts invisible *padding* between members for alignment, and that padding (and even member sizes) can differ across compilers and platforms. `sizeof(Reading)` is not a portable contract.
 
 A real serialization format handles both: it defines field order and byte order explicitly, so the bytes mean the same thing everywhere. That is the whole point of using one.
@@ -136,5 +136,5 @@ A real serialization format handles both: it defines field order and byte order 
 - **Serialization** converts an object to a portable byte sequence; **deserialization** rebuilds it. You need it to **transmit** objects between programs and to **persist** them — an in-memory C++ object is not portable.
 - Prefer a **language-agnostic** format so different languages interoperate. **Text** (JSON, YAML, XML, CSV) is readable; **binary** (protobuf, FlatBuffers, MessagePack) is compact and fast. Default to **JSON** unless size/speed forces binary.
 - C++ has **no standard serialization** — use a library (**nlohmann/json** for JSON, protobuf/FlatBuffers for binary). **Don't roll your own** beyond toy cases.
-- **Never send raw structs**: **endianness** (the wire is big-endian / network byte order) and **struct padding** make them non-portable. A real format pins down field and byte order for you.
+- **Never send raw structs**: **endianness** (protocol headers use big-endian / network byte order, but each serialization format defines its own — the rule is that the order must be *agreed*, not assumed) and **struct padding** make them non-portable. A real format pins down field and byte order for you.
 - Serialization and **framing** are different jobs — over a [TCP](sockets.md) stream you also need a length prefix or delimiter to mark message boundaries. Next: [Networking in C++](networking.md), the libraries that carry these bytes.

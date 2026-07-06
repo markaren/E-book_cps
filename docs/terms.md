@@ -74,11 +74,13 @@ A quick reference for the vocabulary used throughout this book. Each term links 
 
 | Term | Meaning |
 |------|---------|
-| **Target** | A thing CMake builds — a library or an executable. ([CMake](Chapter6/cmake.md)) |
-| **Visibility (PUBLIC/PRIVATE/INTERFACE)** | Whether a target's dependency propagates to things that link it. ([CMake](Chapter6/cmake.md)) |
-| **Static / shared library** | Linked into the binary vs a separate `.dll`/`.so` found at run time. ([Dependencies](Chapter6/dependencies.md)) |
-| **vcpkg** | A C++ package manager; declare dependencies in `vcpkg.json`. ([Dependencies](Chapter6/dependencies.md)) |
-| **`extern "C"`** | Gives a C++ function C linkage (no name mangling) so other languages can call it. ([Calling C++ from Python](Chapter6/python_interop.md)) |
+| **Target** | A thing CMake builds — a library or an executable. ([CMake](Chapter5/cmake.md)) |
+| **Visibility (PUBLIC/PRIVATE/INTERFACE)** | Whether a target's dependency propagates to things that link it. ([CMake](Chapter5/cmake.md)) |
+| **Static / shared library** | Linked into the binary vs a separate `.dll`/`.so` found at run time. ([Dependencies](Chapter5/dependencies.md)) |
+| **vcpkg** | A C++ package manager; declare dependencies in `vcpkg.json`. ([Dependencies](Chapter5/dependencies.md)) |
+| **vcpkg manifest mode** | Declaring a project's dependencies in a checked-in `vcpkg.json`, resolved via vcpkg's CMake toolchain file, so every machine builds the same versions. ([Dependencies](Chapter5/dependencies.md)) |
+| **FetchContent** | A built-in CMake module that downloads a dependency's source at configure time and compiles it as part of your build — no separate package manager. ([CMake](Chapter5/cmake.md)) |
+| **`extern "C"`** | Gives a C++ function C linkage (no name mangling) so other languages can call it. ([Calling C++ from Python](Chapter5/python_interop.md)) |
 | **Cross-compiling** | Building on one architecture (host) a binary for another (target). ([Embedded Linux](embedded_linux.md)) |
 | **ThreadSanitizer (TSan)** | A runtime tool that detects data races. ([Debugging Concurrent Programs](debugging_concurrency.md)) |
 | **Undefined behaviour (UB)** | Code with no defined meaning; may "work" then break — not portable. ([Portability](portability.md)) |
@@ -87,7 +89,7 @@ A quick reference for the vocabulary used throughout this book. Each term links 
 
 | Term | Meaning |
 |------|---------|
-| **OpenCV / `cv::Mat`** | The C++ computer-vision library; an image is a matrix of pixels (BGR). ([OpenCV in C++](Chapter7/opencv.md)) |
-| **Calibration** | Recovering a camera's intrinsic (lens) and extrinsic (pose) parameters. ([Camera Calibration](Chapter7/calibration.md)) |
-| **CNN / YOLO** | Convolutional network; YOLO detects objects in a single pass. ([Deep Vision](Chapter7/deep_vision.md)) |
-| **ONNX** | A framework-agnostic model format for running inference in C++. ([Model Deployment & ONNX](Chapter7/onnx.md)) |
+| **OpenCV / `cv::Mat`** | The C++ computer-vision library; an image is a matrix of pixels (BGR). ([OpenCV in C++](Chapter6/opencv.md)) |
+| **Calibration** | Recovering a camera's intrinsic (lens) and extrinsic (pose) parameters. ([Camera Calibration](Chapter6/calibration.md)) |
+| **CNN / YOLO** | Convolutional network; YOLO detects objects in a single pass. ([Deep Vision](Chapter6/deep_vision.md)) |
+| **ONNX** | A framework-agnostic model format for running inference in C++. ([Model Deployment & ONNX](Chapter6/onnx.md)) |

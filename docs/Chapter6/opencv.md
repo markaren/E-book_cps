@@ -3,7 +3,7 @@
 A cyber-physical system that *sees* — a robot following a line, detecting an obstacle, reading a marker — needs **computer vision**. The standard tool is **OpenCV**, and although most tutorials (and the lectures) use its Python interface, OpenCV is a **C++ library** at heart. That matters here: the perception code you prototype in Python is the same code you can run, fast, in C++ on the robot. This part takes that C++ and on-device angle.
 
 !!! note "Where the work actually happens"
-    Be honest about the split. Vision *training* and quick experiments are usually done in **Python** (numpy, PyTorch). Vision *deployment* — running on the Pi, in a real-time loop, alongside your control code — is where **C++** earns its place. This part focuses on the C++ side; [Model Deployment & ONNX](onnx.md) and [Calling C++ from Python](../Chapter6/python_interop.md) connect the two worlds.
+    Be honest about the split. Vision *training* and quick experiments are usually done in **Python** (numpy, PyTorch). Vision *deployment* — running on the Pi, in a real-time loop, alongside your control code — is where **C++** earns its place. This part focuses on the C++ side; [Model Deployment & ONNX](onnx.md) and [Calling C++ from Python](../Chapter5/python_interop.md) connect the two worlds.
 
 ---
 
@@ -11,7 +11,7 @@ A cyber-physical system that *sees* — a robot following a line, detecting an o
 
 OpenCV (Open Source Computer Vision Library) is a mature, open-source library for real-time computer vision: image and video processing, feature detection, object and face detection, and — through its `dnn` module — running deep-learning models. It is written in C++ and provides bindings for Python, Java, and more, so an algorithm is implemented once and used from several languages.
 
-Add it to a CMake project like any other dependency (via [vcpkg](../Chapter6/dependencies.md), `vcpkg install opencv`):
+Add it to a CMake project like any other dependency (via [vcpkg](../Chapter5/dependencies.md) — add `opencv` to your `vcpkg.json`):
 
 ```cmake
 find_package(OpenCV REQUIRED)
@@ -19,6 +19,9 @@ find_package(OpenCV REQUIRED)
 add_executable(vision main.cpp)
 target_link_libraries(vision PRIVATE ${OpenCV_LIBS})
 ```
+
+!!! warning "OpenCV builds from source — start it early"
+    On Windows, vcpkg **compiles OpenCV from source**, which takes **30–60+ minutes and several GB** of disk the first time (it pulls in many transitive dependencies). Trigger the build **before** the lab, not during it — the first `cmake` configure after adding `opencv` is when it happens. If you do not need the full library, request a **trimmed feature set** (e.g. `opencv[core,imgproc,imgcodecs]` in the manifest) to cut the build down substantially.
 
 ---
 
@@ -99,10 +102,13 @@ int main() {
     cv::Mat frame;
     while (camera.read(frame)) {                       // grab the next frame
         // ... process `frame` here ...
-        if (cv::waitKey(1) == 27) break;               // Esc to quit
+        cv::imshow("camera", frame);                   // a HighGUI window must exist...
+        if (cv::waitKey(1) == 27) break;               // ...for waitKey to see the Esc key (27)
     }
 }
 ```
+
+`waitKey` only returns a key code when a HighGUI window has focus — without the `imshow` above it always returns `-1`, so the Esc test can never fire. On a **headless** device (below) you drop both lines and stop the loop another way — an [atomic flag](../Chapter2/atomics.md) set from elsewhere, as the [pipeline](onnx.md#a-real-time-vision-pipeline) does.
 
 That `while (camera.read(frame))` loop is the spine of every vision application — and on a robot it runs on its **own thread**, feeding results to the control loop, so a slow frame never stalls the rest of the system. Structuring that is the subject of the [pipeline section in Model Deployment](onnx.md#a-real-time-vision-pipeline), and it is exactly the [producer/consumer](../Chapter2/condition_variables.md) and [real-time](../Chapter3/real_time.md) machinery from Parts 2 and 3.
 
@@ -113,13 +119,13 @@ That `while (camera.read(frame))` loop is the spine of every vision application 
 
 ## Prototype in Python, deploy in C++
 
-The honest workflow for this course: **explore in Python**, where numpy slicing and instant feedback make experimentation quick, then **port the settled pipeline to C++** for the robot, where you need real-time performance and integration with your control and [communication](../Chapter4/serialization.md) code. Because it is the *same library*, a `cv::cvtColor` in C++ does exactly what `cv2.cvtColor` did in Python — the translation is mechanical. When only part of the pipeline needs C++, the [Python↔C++ bridge](../Chapter6/python_interop.md) lets the two coexist.
+The honest workflow for this course: **explore in Python**, where numpy slicing and instant feedback make experimentation quick, then **port the settled pipeline to C++** for the robot, where you need real-time performance and integration with your control and [communication](../Chapter4/serialization.md) code. Because it is the *same library*, a `cv::cvtColor` in C++ does exactly what `cv2.cvtColor` did in Python — the translation is mechanical. When only part of the pipeline needs C++, the [Python↔C++ bridge](../Chapter5/python_interop.md) lets the two coexist.
 
 ---
 
 ## Summary
 
-- **OpenCV** is a C++ computer-vision library with bindings for other languages; add it with `find_package(OpenCV)` and [vcpkg](../Chapter6/dependencies.md). The same code runs in Python (for prototyping) and C++ (for deployment).
+- **OpenCV** is a C++ computer-vision library with bindings for other languages; add it with `find_package(OpenCV)` and [vcpkg](../Chapter5/dependencies.md). The same code runs in Python (for prototyping) and C++ (for deployment).
 - An image is a **`cv::Mat`** — a pixel matrix. Grayscale is 1 channel (`0–255`); colour is **3 channels in BGR order** (not RGB — the classic gotcha). Depth is bits per value (usually 8-bit).
 - Work on **whole matrices** with built-in functions (`imread`, `cvtColor`, `GaussianBlur`, `Canny`, `threshold`, `findContours`) rather than per-pixel loops; HSV + `inRange` is the go-to for colour tracking.
 - A live system reads frames with **`cv::VideoCapture`** in a loop — run it on its **own thread** ([Part 2](../Chapter2/condition_variables.md)/[Part 3](../Chapter3/real_time.md)) so vision never stalls control. Avoid `imshow` on a headless Pi.

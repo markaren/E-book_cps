@@ -1,12 +1,12 @@
 # Lambdas & std::function
 
-You have been writing lambdas since [Part 2](../Chapter2/threads.md) — they are how you hand work to a thread, a [future](../Chapter3/futures.md), a [thread pool](../Chapter3/thread_pools.md), or a standard algorithm. This chapter makes them precise, with particular attention to the one thing that bites hardest in concurrent code: **what a lambda captures, and how long that capture stays valid.** It then covers `std::function`, the type that lets you *store* a callable — the backbone of task queues and callbacks.
+You met lambdas in AIS1003 (see the [Lambda Expressions chapter](https://markaren.github.io/E-book_cpp/lambdas/) for the basics), and they are how you will hand work to a [thread](../Chapter2/threads.md), a [future](../Chapter3/futures.md), a [thread pool](../Chapter3/thread_pools.md), or a standard algorithm throughout the rest of this book. This chapter revisits them with the concurrency lens on, paying particular attention to the one thing that bites hardest in concurrent code: **what a lambda captures, and how long that capture stays valid.** It then goes past what AIS1003 covered — into `std::function` used to *store* callables, plus `mutable`, generic lambdas, and init-capture — the machinery behind task queues and callbacks.
 
 ---
 
 ## Anatomy of a lambda
 
-A lambda is an unnamed function you can write inline. It has three parts:
+As in AIS1003, a lambda is an unnamed function you can write inline. The next two sections are a quick recap of that syntax before we turn to the parts that matter for concurrency. It has three parts:
 
 ```cpp
 auto add = [](int a, int b) { return a + b; };
@@ -103,7 +103,7 @@ print("hello");     // const char*
 
 ## `std::function`: storing any callable
 
-A lambda each has its own unique, unnameable type, so you cannot declare a variable of "lambda type" or put differently-typed lambdas in one container. **`std::function<Signature>`** (from `<functional>`) solves this: it is a wrapper that can hold *any* callable matching a given signature — a lambda, a free function, a functor — behind one uniform type.
+Each lambda has its own unique, unnameable type, so you cannot declare a variable of "lambda type" or put differently-typed lambdas in one container. **`std::function<Signature>`** (from `<functional>`) solves this: it is a wrapper that can hold *any* callable matching a given signature — a lambda, a free function, a functor — behind one uniform type.
 
 ```cpp
 #include <functional>

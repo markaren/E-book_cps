@@ -58,6 +58,12 @@ sequenceDiagram
 !!! danger "This is undefined behaviour, not just a wrong number"
     Two threads accessing the same memory location where at least one access is a write, without synchronisation, is a **data race** — and a data race is *undefined behaviour* in C++. The program is not "usually right with an occasional off-by-one"; it has no defined meaning at all. The compiler is allowed to assume data races never happen, and may optimise in ways that produce results stranger than a lost update. Never reason about what a racy program "probably does."
 
+!!! note "*Race condition* and *data race* are not the same thing"
+    A **race condition** is the broader bug: any situation where the result depends on the timing of concurrent operations. A **data race** is one specific, always-undefined *cause* of it — unsynchronised concurrent access to the same memory with at least one write. The two often coincide, but you can have either without the other. Fixing every data race (say, by making all your shared variables [atomic](atomics.md)) does *not* automatically remove every race condition: a check-then-act sequence on atomics (`if (size > 0) pop();`) has no data race — every access is atomic — yet still races, because another thread can act between the check and the act. Mutexes are what let you make a whole *sequence* race-free, not just each individual access.
+
+!!! tip "See the race for yourself with ThreadSanitizer"
+    The broken counter above is the ideal first target for **ThreadSanitizer (TSan)** — a tool that instruments your program and reports the exact two accesses that race, with both stack traces. Build the un-synchronised version with `-fsanitize=thread` and run it: instead of a merely-wrong number you get a precise diagnosis pointing at the two `++counter`s. See [Debugging Concurrency](../debugging_concurrency.md) for how to build and read its output.
+
 ---
 
 ## The critical section
@@ -113,7 +119,7 @@ This is correct: the answer is `2000000` every time. But the hand-written `lock(
 
 ## RAII locks: never unlock by hand
 
-What happens if the critical section throws an exception, or returns early, between `lock()` and `unlock()`? The `unlock()` never runs, the mutex stays locked forever, and every other thread that wants it blocks for good. This is a **deadlock** caused by a missing unlock — and with manual locking it is one stray `return` away.
+What happens if the critical section throws an exception, or returns early, between `lock()` and `unlock()`? The `unlock()` never runs, the mutex stays locked forever, and **every other thread that wants it blocks forever**. (This is not a *deadlock* in the formal sense — by the four-condition definition [below](#deadlock-when-locks-wait-forever) there is no *circular wait*, just one lock that is never released — but the practical outcome is just as fatal.) With manual locking, this permanent lockout is one stray `return` away.
 
 You already met the solution in AIS1003: **RAII**. Bind the unlock to the destructor of a guard object, and it runs automatically when the guard leaves scope — on a normal exit, an early `return`, *or* an exception.
 
@@ -250,7 +256,7 @@ There are two reliable cures.
 
 **Cure 1 — always lock in the same order.** If *every* thread locks `mutexA` before `mutexB`, the cycle cannot form. Consistent lock ordering is the most important deadlock-avoidance habit you can build.
 
-**Cure 2 — lock them together with `std::scoped_lock`.** When you genuinely need two mutexes at once, let the standard library acquire them as a single atomic step. `std::scoped_lock` uses a deadlock-avoidance algorithm internally, so the order you pass them does not matter:
+**Cure 2 — lock them together with `std::scoped_lock`.** When you genuinely need two mutexes at once, let the standard library acquire the whole set for you. Note that this is *not* one indivisible atomic acquisition — at any instant a thread may hold one mutex while another is still free. What `std::scoped_lock` guarantees is that it will *never deadlock*: it uses a deadlock-avoidance algorithm (locking, and backing off and retrying if a mutex is unavailable) so that no circular wait can form, whatever order you pass the mutexes in:
 
 <!-- no-ce -->
 ```cpp

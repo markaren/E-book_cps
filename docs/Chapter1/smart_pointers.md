@@ -60,6 +60,8 @@ Use `std::make_shared` to create one. The cost over `unique_ptr` is the control 
 
 Two `shared_ptr`s that point at each other form a **cycle**: each keeps the other's count above zero, so neither is ever freed — a leak. `std::weak_ptr` breaks the cycle. It refers to an object managed by a `shared_ptr` *without* contributing to the count; to use it you call `.lock()`, which returns a `shared_ptr` if the object is still alive or an empty one if it has been freed. Use a `weak_ptr` for a "back-reference" (a child pointing back at its parent) or any cache/observer that must not keep the object alive.
 
+This is not abstract for AIS2203: the [Threepp](https://github.com/markaren/threepp) simulator you will build against hands you objects through `shared_ptr` — `Object3D::create()` returns one, so nodes in the scene graph are shared-owned. A scene graph is precisely the cyclic case above: a parent owns its children (a `shared_ptr` *down* the tree), so each child's link back *up* to its parent must be a `weak_ptr`, or the parent and child would keep each other alive forever.
+
 ---
 
 ## Raw pointers are for borrowing
@@ -79,7 +81,10 @@ The rule from [Ownership & RAII](ownership.md): smart pointers express *ownershi
 
 This is the part specific to AIS2203, and the most common source of confusion. There are two different objects in play — the `shared_ptr` *handle* and the *object it points to* — and they have **different** thread-safety properties.
 
-**The reference count is thread-safe.** A `shared_ptr`'s control block uses an *atomic* counter, so copying and destroying `shared_ptr`s from multiple threads is safe — the count will never be corrupted, and the object is freed exactly once even under concurrent access.
+**The reference count is thread-safe.** A `shared_ptr`'s control block uses an *atomic* counter, so copying and destroying *distinct* `shared_ptr` instances that point at the same object — each thread holding its own — is safe: the count will never be corrupted, and the object is freed exactly once even under concurrent access. This is the everyday case, and it is exactly what makes `shared_ptr` usable across threads.
+
+!!! warning "Distinct instances, yes; the *same* instance, no"
+    The guarantee covers *different* `shared_ptr` objects (typically one per thread) that happen to share ownership. Two threads touching the **same** `shared_ptr` variable — one calling `.reset()` or assigning to it while another reads or copies it — is itself a data race on the pointer, regardless of the atomic count. If several threads must mutate one shared `shared_ptr` object, guard it like any other shared variable (or use the atomic `shared_ptr` operations). Give each thread its own copy and the problem disappears.
 
 **The pointed-to object is *not* thread-safe.** `shared_ptr` protects *its own bookkeeping*, nothing more. If two threads call mutating methods on the same underlying object through their `shared_ptr`s, that is an ordinary [data race](../Chapter2/sharing_data.md) and you still need a mutex or atomics around the object.
 
@@ -97,7 +102,9 @@ std::jthread worker([d = std::move(data)] {     // thread now owns the buffer
 });                                              // freed when the thread's lambda dies
 ```
 
-**Keeping shared data alive across threads** — the lifetime bug from [Creating Threads](../Chapter2/threads.md) (a thread outliving the data it borrowed) disappears if the thread is a *co-owner* rather than a borrower. Capture a `shared_ptr` **by value** into the thread's lambda, and the data is guaranteed to live as long as the thread does:
+The `[d = std::move(data)]` here is an *init-capture* — a capture that creates a new lambda member (`d`) by moving into it, which is the only way to get a move-only type like `unique_ptr` into a lambda. [Lambdas](lambdas.md) covers the syntax; for now, read it as "the lambda takes over ownership of the buffer."
+
+**Keeping shared data alive across threads** — the lifetime bug [Creating Threads](../Chapter2/threads.md) will show (a thread outliving the data it borrowed) disappears if the thread is a *co-owner* rather than a borrower. Capture a `shared_ptr` **by value** into the thread's lambda, and the data is guaranteed to live as long as the thread does:
 
 ```cpp
 auto config = std::make_shared<Config>();

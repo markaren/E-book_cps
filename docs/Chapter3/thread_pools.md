@@ -119,9 +119,9 @@ int main() {
 
 Three details are worth dwelling on, because they are the parts people get wrong.
 
-**`enqueue` returns a future.** It wraps your callable in a `packaged_task`, takes its future *before* queuing it, and returns that future to you. The worker that eventually runs the task fulfils the future; you read the result (or catch its [exception](futures.md)) with `get()`. The `decltype(task())` machinery is just [templates](../Chapter1/templates.md) deducing the result type so the pool works for any return type.
+**`enqueue` returns a future.** It wraps your callable in a `packaged_task`, takes its future *before* queuing it, and returns that future to you. The worker that eventually runs the task fulfils the future; you read the result (or catch its [exception](futures.md)) with `get()`. Note that the `packaged_task` already does the exception-safety work for you: if the task throws, the exception is captured into the shared state and re-thrown at `get()` — the worker thread itself never sees an escaping exception, so one failing task cannot take down the pool. The `decltype(task())` machinery is just [templates](../Chapter1/templates.md) deducing the result type so the pool works for any return type.
 
-**The `shared_ptr` around the `packaged_task`.** A `packaged_task` is move-only, but `std::function` (what the queue holds) requires a *copyable* target. Wrapping the task in a `std::shared_ptr` makes the queued lambda copyable while still owning the one real task. It is a standard idiom — remember it.
+**The `shared_ptr` around the `packaged_task`.** A `packaged_task` is move-only, but `std::function` (what the queue holds) requires a *copyable* target. Wrapping the task in a `std::shared_ptr` makes the queued lambda copyable while still owning the one real task. It is a standard idiom — remember it. (**C++23** removes the need for the trick: `std::move_only_function<void()>` is a move-only counterpart to `std::function`, so you can store the move-only `packaged_task` directly in the queue and drop the `shared_ptr`. Until you can rely on C++23, the `shared_ptr` wrapper is the portable way.)
 
 **The destructor joins the workers explicitly.** This is the subtle one. Members are destroyed in *reverse* declaration order, so `workers_` (declared first) would be destroyed *last* — after `mutex_` and `cv_` are already gone. If a worker were still touching them at that point, that is undefined behaviour. So the destructor sets `stop_`, notifies everyone, and **joins every worker before returning** — guaranteeing the workers have stopped while the mutex and condition variable are still alive.
 
@@ -144,10 +144,10 @@ That suits **CPU-bound** tasks, where the limiting resource is cores. For **I/O-
 
 ## You usually use a library, not your own
 
-The standard library has **no thread pool yet** — it is expected to arrive with the executors / `std::execution` work in a future standard. Until then you either write a small one like the above or, more commonly, use a well-tested library:
+The standard library has **no thread pool yet**. The direction the standard is taking is `std::execution` (the "senders/receivers" framework), voted into **C++26** — it provides schedulers and execution contexts on which a pool sits, though it is a larger and more abstract facility than the plain pool here. Until you can rely on it, you either write a small one like the above or, more commonly, use a well-tested library:
 
 - A header-only pool such as `BS::thread_pool`.
-- The pool that ships with a framework you are already using ([Boost.Asio](../Chapter4/networking.md) has one via its `io_context`).
+- The pool that ships with a framework you are already using — [Boost.Asio](../Chapter4/networking.md) offers both a ready-made `asio::thread_pool` and the ad-hoc pool you get by running one `io_context` from several threads.
 - Higher-level [parallel algorithms](parallel_algorithms.md) (next chapter), which run on an implementation-managed pool so you never see the threads at all.
 
 Writing your own once, as we just did, is worth it for understanding — but for real projects, prefer a maintained implementation.

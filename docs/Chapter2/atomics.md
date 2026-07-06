@@ -30,7 +30,7 @@ int main() {
 }
 ```
 
-`std::atomic<int>` (from `<atomic>`) guarantees that `++counter` happens as a single, uninterruptible step: no other thread can observe a half-finished update, and no increment is ever lost. The result is `2000000` every run. Compared with the mutex version this is shorter, and for a lone counter it is faster — there is no lock to acquire, and the increment compiles down to a single hardware instruction on most CPUs.
+`std::atomic<int>` (from `<atomic>`) guarantees that `++counter` happens as a single, uninterruptible step: no other thread can observe a half-finished update, and no increment is ever lost. The result is `2000000` every run. Compared with the mutex version this is shorter, and for a lone counter it is faster — there is no lock to acquire, and the increment compiles down to one or a few hardware instructions on most CPUs (a dedicated atomic instruction on x86; a small load-linked/store-conditional retry loop on ARM).
 
 The atomic types support the operations you would expect — `++`, `--`, `+=`, and the explicit `fetch_add`, `fetch_sub`, `exchange`, `load`, and `store`:
 
@@ -92,7 +92,7 @@ int main() {
 `std::atomic<bool>` forces a genuine memory read each time and establishes the ordering that makes one thread's write visible to the other. This is the manual equivalent of the `std::stop_token` you saw in [Creating Threads](threads.md) — and `stop_token` is usually the cleaner choice for a `jthread`, because it also integrates with `request_stop()`. Reach for `std::atomic<bool>` when you need a stop/ready flag outside a `jthread`'s cancellation machinery.
 
 !!! note "`atomic_flag` and spinlocks"
-    `std::atomic_flag` is the simplest atomic — just `test_and_set()` and `clear()`. It is the primitive from which a *spinlock* is built. You will rarely use it directly: a spinlock busy-waits (the very thing [condition variables](condition_variables.md) avoid), so it is appropriate only for locks held for a handful of instructions. Know it exists; reach for it almost never.
+    `std::atomic_flag` is the simplest atomic. Historically it offered only `test_and_set()` and `clear()`; **C++20 added `test()`** (read without setting) and the `wait()`/`notify_one()`/`notify_all()` blocking operations, so a thread can now sleep until a flag changes rather than spin. It is the primitive from which a *spinlock* is built. You will rarely use it directly: a spinlock busy-waits (the very thing [condition variables](condition_variables.md) avoid), so it is appropriate only for locks held for a handful of instructions. Know it exists; reach for it almost never.
 
 ---
 
@@ -151,7 +151,7 @@ A good rule of thumb: **a lone counter or flag → atomic; anything with an inva
 
 ## Summary
 
-- `std::atomic<T>` makes a variable's individual operations **indivisible and lock-free**, fixing data races on simple shared values (a counter, a flag) without the cost of a mutex.
+- `std::atomic<T>` makes a variable's individual operations **indivisible** (and usually **lock-free** for small, trivially-copyable types — a large `atomic<BigStruct>` may fall back to an internal lock), fixing data races on simple shared values (a counter, a flag) without the cost of a mutex.
 - Atomics give two guarantees: **no torn values**, and **visibility/ordering** of writes across threads. The second is why a plain `bool` flag is broken — the optimiser may cache it and loop forever, and a write may never become visible.
 - `std::atomic<bool>` is the manual stop/ready flag; for a `jthread`, prefer the integrated [`std::stop_token`](threads.md). `std::atomic_flag` underlies spinlocks — rarely your tool.
 - C++ has a rich **memory model**, but **use the default `seq_cst` ordering**; relaxed orderings are an expert topic — see Williams' *C++ Concurrency in Action*.

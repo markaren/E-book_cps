@@ -91,6 +91,9 @@ int main() {
 
 While `readSensor()` waits, `updateDisplay()` cannot run, and the interface stutters. Put the slow work on its own thread and the main thread stays responsive. Threads are one answer to this; [Part 3](../Chapter3/futures.md) covers the others (futures, coroutines, async I/O), because a thread is not always the right tool.
 
+!!! warning "Wait by sleeping, not by spinning"
+    There is a tempting but wrong way to have one thread wait for another: loop and re-check a shared variable as fast as possible — `while (!ready) { }`. This is a **busy wait** (or "spin"), and it is almost always a mistake. The waiting thread pins a CPU core at 100%, doing no useful work, stealing that core from the very thread it is waiting on and — on a battery-powered robot — draining power for nothing. The right approach is to let the thread **sleep** until it is signalled, so it costs nothing while it waits. The tools that do this properly (`join()`, and the [condition variable](condition_variables.md) in a later chapter) block the thread instead of spinning it. Whenever you catch yourself writing an empty polling loop, that is the signal to reach for one of them.
+
 ---
 
 ## A first thread
@@ -132,7 +135,7 @@ This is a deliberate design choice: silently abandoning a thread is almost alway
 
 ## How many threads make sense?
 
-More threads is not faster. Every thread costs memory (a stack, often ~1 MB) and every context switch costs time. Past the number of CPU cores, extra compute-bound threads mostly fight each other for the same cores and add overhead.
+More threads is not faster. Every thread costs memory (a stack — 1 MB by default on Windows, typically 8 MB on Linux) and every context switch costs time. Past the number of CPU cores, extra compute-bound threads mostly fight each other for the same cores and add overhead.
 
 The standard library reports a sensible upper bound:
 

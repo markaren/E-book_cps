@@ -24,7 +24,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 ```
 
-Use a recent compiler. **GCC 11+**, **Clang 14+**, or **MSVC 19.3+ (Visual Studio 2022)** all have the C++20 thread features this book uses. Older compilers will fail to find `<jthread>` and the C++20 synchronisation types.
+Use a recent compiler. **GCC 11+**, **MSVC 19.30+ (Visual Studio 2022 17.0+)**, or **Clang 14+** all have the C++20 thread features this book uses. Older compilers will fail to find `<jthread>` and the C++20 synchronisation types.
+
+!!! warning "Clang and the standard library it uses"
+    Clang 14+ has `std::jthread` and `std::stop_token` **only when paired with a recent GNU standard library (libstdc++)** — the usual setup on Linux and in MinGW. If Clang uses LLVM's own **libc++** (the default on macOS, via Apple Clang), those types arrived only in **libc++ 17**. On a Mac, prefer a recent Homebrew LLVM or GCC over the system Apple Clang for this book's threading code.
+
+!!! tip "CLion's bundled MinGW is a safe default on Windows"
+    If you installed CLion on Windows the AIS1003 way, it came with a **bundled MinGW** toolchain (GCC 13+, `posix` thread model) that has full C++20 threading support out of the box — this is the toolchain most AIS1003 alumni already have, and it needs no extra setup. Check it under **Settings → Build, Execution, Deployment → Toolchains**. MSVC (via the Visual Studio Build Tools) works equally well if you prefer it.
 
 ---
 
@@ -64,7 +70,7 @@ You do not need all three — and you may need none. WSL2 is more than enough to
 
 ## Third-party libraries
 
-C++ has no networking in its standard library (see [Networking in C++](Chapter4/networking.md)), so Part 4 uses external libraries such as **Boost.Asio**. This course manages dependencies with **vcpkg**, covered in [Dependencies with vcpkg](Chapter6/dependencies.md). You do not need it yet — install it when a chapter first asks for a library.
+C++ has no networking in its standard library (see [Networking in C++](Chapter4/networking.md)), so Part 4 uses external libraries such as **Boost.Asio**. This course manages dependencies with **vcpkg**, covered in [Dependencies with vcpkg](Chapter5/dependencies.md). AIS1003 fetched its one or two libraries with CMake's `FetchContent`; this course adds vcpkg because the later chapters pull in several larger libraries (Boost, OpenCV) that are slow to build from source, and vcpkg supplies prebuilt binaries — both tools stay valid, and [Part 5](Chapter5/dependencies.md) explains which one owns what. You do not need it yet — install it when a chapter first asks for a library.
 
 ---
 

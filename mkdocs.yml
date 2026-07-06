@@ -123,10 +123,15 @@ plugins:
             Deep Vision: Dyp datasyn
             Model Deployment & ONNX: Modellutrulling og ONNX
             Virtual Environments: Virtuelle miljøer
+            "7. Robot Middleware: ROS2": "7. Robotmellomvare: ROS2"
+            ROS2 Concepts: ROS2-konsepter
+            ROS2 on Windows: ROS2 på Windows
+            ROS2 Workspace: ROS2-arbeidsområdet
             Reference: Referanse
             Debugging Concurrent Programs: Feilsøke samtidige programmer
             Portability: Portabilitet
             The Pimpl Idiom: Pimpl-idiomet
+            Presenting Your Project: Presentere prosjektet ditt
             Using AI for Coding: Bruke KI til koding
             Common Terms: Vanlige begreper
             FAQ: Ofte stilte spørsmål
@@ -168,30 +173,36 @@ nav:
     - Real-Time & Timing: Chapter3/real_time.md
     - Exercises: Chapter3/exercises.md
   - 4. Data Communication:
-    - Serialization: Chapter4/serialization.md
     - Sockets, TCP & UDP: Chapter4/sockets.md
+    - Serialization: Chapter4/serialization.md
     - Networking in C++: Chapter4/networking.md
     - Serial Communication: Chapter4/serial.md
     - Modbus: Chapter4/modbus.md
     - MQTT & RPC: Chapter4/mqtt_rpc.md
     - Exercises: Chapter4/exercises.md
   - 5. Building Larger Projects:
-    - CMake for Multi-Target Projects: Chapter6/cmake.md
-    - Dependencies with vcpkg: Chapter6/dependencies.md
-    - Calling C++ from Python: Chapter6/python_interop.md
-    - Exercises: Chapter6/exercises.md
+    - CMake for Multi-Target Projects: Chapter5/cmake.md
+    - Dependencies with vcpkg: Chapter5/dependencies.md
+    - Calling C++ from Python: Chapter5/python_interop.md
+    - Exercises: Chapter5/exercises.md
   - 6. Computer Vision:
-    - OpenCV in C++: Chapter7/opencv.md
-    - Camera Calibration: Chapter7/calibration.md
-    - Deep Vision: Chapter7/deep_vision.md
-    - Model Deployment & ONNX: Chapter7/onnx.md
-    - Virtual Environments: Chapter7/virtual_environments.md
+    - OpenCV in C++: Chapter6/opencv.md
+    - Camera Calibration: Chapter6/calibration.md
+    - Deep Vision: Chapter6/deep_vision.md
+    - Model Deployment & ONNX: Chapter6/onnx.md
+    - Virtual Environments: Chapter6/virtual_environments.md
+    - Exercises: Chapter6/exercises.md
+  - "7. Robot Middleware: ROS2":
+    - ROS2 Concepts: Chapter7/ros2_concepts.md
+    - ROS2 on Windows: Chapter7/ros2_windows.md
+    - ROS2 Workspace: Chapter7/ros2_workspace.md
     - Exercises: Chapter7/exercises.md
   - Reference:
     - Embedded Linux: embedded_linux.md
     - Debugging Concurrent Programs: debugging_concurrency.md
     - Portability: portability.md
     - The Pimpl Idiom: pimpl.md
+    - Presenting Your Project: presenting.md
     - Using AI for Coding: using_ai.md
     - Common Terms: terms.md
     - FAQ: faq.md

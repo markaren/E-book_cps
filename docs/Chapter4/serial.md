@@ -76,6 +76,9 @@ int main() {
 
 Note the recurring themes: you set the **baud rate** to match the device, and you read **up to a `'\n'`** — the same [framing](serialization.md) problem as TCP. A serial link, like a TCP socket, is a *byte stream* with no built-in message boundaries, so a newline (or a length prefix) is how you tell where one reading ends and the next begins.
 
+!!! note "Windows: finding the COM port, and the `\\.\COM10` trap"
+    On Windows the port name is `COM3`, `COM4`, and so on — open **Device Manager → Ports (COM & LPT)** to see which number your Arduino was assigned (it can change between USB ports). One gotcha bites everyone eventually: the plain `"COM10"` form only works for **COM1–COM9**. For **COM10 and above** you must use the extended path `\\.\COM10` — written in a C++ string literal as `"\\\\.\\COM10"` (each backslash doubled). A device that worked as `COM9` and then silently fails after being re-enumerated as `COM10` is almost always this.
+
 !!! tip "The Arduino side"
     An Arduino sketch sends with the built-in `Serial` library: `Serial.begin(115200);` then `Serial.println(value);`. Over USB this appears to the PC as a serial port. A robot's typical setup is an Arduino streaming `sensor,value\n` lines that a C++ program on the PC or Pi reads and [deserializes](serialization.md) — the bridge between the embedded world and your application.
 

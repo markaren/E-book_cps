@@ -1,5 +1,8 @@
 # Parallel Algorithms
 
+!!! note "Optional / reference material for this course"
+    This chapter is a **reference**, not required reading for the semester project. The parallel policies are genuinely useful, but on the default CLion + MinGW toolchain they need extra setup (see the linking section below), so most of your concurrency work will use threads, futures, and the [thread-safe queue](../Chapter2/condition_variables.md#a-reusable-thread-safe-queue) instead. Read this when you have "one operation over a big collection" and want the library to parallelise it for you; skip it otherwise.
+
 A [thread pool](thread_pools.md) is the right tool when you have a stream of distinct tasks. But a huge fraction of real work is simpler than that: *do the same operation to every element of a big collection* — sum a million readings, transform an image, sort a vector. For this, C++17 lets you parallelise the standard algorithms you already know by adding one argument: an **execution policy**. No threads, no queue, no locks in your code — the library does it for you.
 
 ---
@@ -85,7 +88,7 @@ std::for_each(std::execution::par, v.begin(), v.end(),
 double sum = std::reduce(std::execution::par, v.begin(), v.end(), 0.0);
 ```
 
-`par_unseq` is stricter still: because calls may be *interleaved within a single thread* (vectorised), the callable may **not** acquire a mutex, allocate memory, or do anything that needs to complete atomically with respect to another call. Reserve `par_unseq` for simple, self-contained element operations.
+`par_unseq` is stricter still: because calls may be *interleaved within a single thread* (vectorised), the callable may **not** acquire a mutex or do anything else that must complete atomically with respect to another call — a lock taken mid-element could deadlock against the interleaved call on the same thread. (Memory *allocation* is the notable exception: the standard explicitly exempts the allocation functions, so `new`/`std::allocator` remain safe under `par_unseq` — but a plain `std::mutex::lock` is not.) Reserve `par_unseq` for simple, self-contained element operations.
 
 !!! danger "An escaping exception calls `std::terminate`"
     If an element function throws under a parallel policy and the exception would escape the algorithm, the program **terminates** — exceptions are not propagated out of parallel algorithms the way they are out of [futures](futures.md). Keep parallel callables non-throwing, or handle errors inside them.
@@ -94,7 +97,7 @@ double sum = std::reduce(std::execution::par, v.begin(), v.end(), 0.0);
 
 ## The practical catch: linking on GCC and Clang
 
-This is the detail that wastes an afternoon if no one warns you. On **MSVC** the parallel policies work out of the box. On **GCC and Clang**, the parallel algorithms are implemented on top of **Intel TBB**, which you must install and link — otherwise `std::execution::par` silently compiles as sequential, or fails to link.
+This is the detail that wastes an afternoon if no one warns you. On **MSVC** the parallel policies work out of the box (MSVC also treats `par_unseq` exactly as `par` — it does not add extra vectorisation). On **libstdc++ (GCC)**, the parallel algorithms are implemented on top of **Intel TBB**: without it you do not get a *silently sequential* build — you typically get a **compile error**, because the `<execution>` machinery pulls in TBB headers that are not present. So a missing TBB is loud, not quiet — but it still stops you dead until you install and link it. (libc++/Clang has historically shipped little or no parallel support at all, so treat GCC+TBB or MSVC as your realistic options.)
 
 In CMake:
 
@@ -105,7 +108,10 @@ add_executable(app main.cpp)
 target_link_libraries(app PRIVATE TBB::tbb)
 ```
 
-Install TBB through your package manager or [vcpkg](../Chapter6/dependencies.md) (`vcpkg install tbb`). Without it, that beautiful `std::execution::par` may do nothing in parallel at all — which is also why these examples carry no "Run on Compiler Explorer" link: the default online compiler is not set up with TBB.
+Install TBB through your package manager or [vcpkg](../Chapter5/dependencies.md) (`vcpkg install tbb`). This is also why these examples carry no "Run on Compiler Explorer" link: the default online compiler is not set up with TBB.
+
+!!! warning "In CLion on Windows you hit this too"
+    CLion's default toolchain on Windows is **MinGW (GCC)**, so you land on exactly the TBB requirement above — `std::execution::par` will not build until you install and link TBB. The quickest way to sidestep it is to switch CLion to the **Visual Studio toolchain** (Settings → Build → Toolchains → add *Visual Studio*), which uses MSVC and gives you the parallel policies with no TBB at all. Use MinGW+TBB if you need GCC specifically; otherwise the MSVC toolchain is the path of least resistance for this chapter.
 
 !!! note "Parallelism has overhead — measure"
     Splitting work across threads costs coordination. For a *small* range, the sequential version wins outright; the parallel one is only faster once the data is large enough to dwarf the overhead. Never assume `par` is faster — benchmark with realistic data, and remember an implementation is always free to fall back to sequential if it judges parallelism not worthwhile.
@@ -124,5 +130,5 @@ Parallel algorithms are the **first** thing to reach for when the work is "the s
 - `seq` (sequential), `par` (parallel), `par_unseq` (parallel + vectorised). `par` is the everyday choice; `par_unseq` is faster but forbids locks/allocation in the callable.
 - Use **`std::reduce`** / `std::transform_reduce` for parallel sums, not the strictly-sequential `std::accumulate`; the operation must be **associative and commutative**, and floating-point sums may differ slightly run to run.
 - Under a parallel policy **you** must avoid data races in the callable, and an escaping **exception calls `std::terminate`**.
-- On **GCC/Clang you must link Intel TBB** (`TBB::tbb`) or the parallel policies do nothing; MSVC works out of the box. Parallelism has overhead — **measure** on realistic data.
+- On **GCC you must install and link Intel TBB** (`TBB::tbb`) or `<execution>` fails to compile; MSVC works out of the box (and treats `par_unseq` as `par`). In **CLion on Windows the default MinGW toolchain hits this** — switch to the Visual Studio toolchain to avoid TBB. Parallelism has overhead — **measure** on realistic data.
 - Reach for parallel algorithms first for "one operation over a big range"; use a [pool](thread_pools.md) for heterogeneous tasks.

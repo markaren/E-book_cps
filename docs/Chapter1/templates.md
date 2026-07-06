@@ -9,6 +9,8 @@ AIS1003 introduced templates as the mechanism behind `std::vector<int>` and `std
 A **function template** is parameterised by type; a **class template** is a blueprint for a whole type. The compiler generates concrete versions on demand:
 
 ```cpp
+#include <algorithm>   // std::max
+
 template <typename T>
 T max3(T a, T b, T c) {
     return std::max(a, std::max(b, c));
@@ -26,7 +28,10 @@ Two properties make templates the right tool for infrastructure code: they are r
 
 ## The payoff: a generic thread-safe queue
 
-Here is why templates matter for AIS2203. In [Part 2](../Chapter2/condition_variables.md) and [Part 3](../Chapter3/thread_pools.md) you repeatedly needed the same thing: a queue that multiple threads can push to and pop from safely, blocking until an item is available. You do not want to rewrite that for `int`, then for `std::string`, then for a task type. Write it **once, generically**, with `T` as the element type:
+Here is why templates matter for AIS2203. In [Part 2](../Chapter2/condition_variables.md) and [Part 3](../Chapter3/thread_pools.md) you will repeatedly need the same thing: a queue that multiple threads can push to and pop from safely, blocking until an item is available. You do not want to rewrite that for `int`, then for `std::string`, then for a task type. Write it **once, generically**, with `T` as the element type.
+
+!!! note "A preview — the locking is taught in Part 2"
+    The class below uses a mutex and a condition variable to make the queue safe under concurrent access. **You are not expected to follow the locking yet** — every piece (`std::mutex`, `std::lock_guard`/`std::unique_lock`, `std::condition_variable`, and the `.wait(...)` call) is taught from scratch in [Condition Variables](../Chapter2/condition_variables.md), which builds this exact class in [its own section](../Chapter2/condition_variables.md#a-reusable-thread-safe-queue). For now, read every locked block as **"only one thread at a time is allowed in here"** and focus on the *template* structure: one class definition, any element type `T`. This is a forward look at what your generic-programming skills will let you build.
 
 ```cpp
 #include <condition_variable>
@@ -47,7 +52,7 @@ public:
 
     T waitAndPop() {
         std::unique_lock<std::mutex> lock(mutex_);
-        cv_.wait(lock, [this] { return !queue_.empty(); });
+        cv_.wait(lock, [this] { return !queue_.empty(); });   // [this] = the lambda may read this queue's members
         T value = std::move(queue_.front());
         queue_.pop();
         return value;
@@ -59,7 +64,7 @@ public:
     }
 
 private:
-    mutable std::mutex mutex_;
+    mutable std::mutex mutex_;   // mutable = lockable even inside a const method like empty()
     std::condition_variable cv_;
     std::queue<T> queue_;
 };
@@ -73,7 +78,7 @@ int main() {
 }
 ```
 
-This single class works for `ThreadSafeQueue<int>`, `ThreadSafeQueue<std::string>`, or `ThreadSafeQueue<Task>` — the [mutex](../Chapter2/sharing_data.md) and [condition variable](../Chapter2/condition_variables.md) logic is written once and reused for every element type. It composes the whole toolkit so far: a [template](templates.md) over `T`, RAII [locks](ownership.md), a condition variable, and [`std::move`](move_semantics.md) to put elements in and take them out without copying. This is exactly the structure a [thread pool](../Chapter3/thread_pools.md) is built on — and now you could write the pool's task queue in one line: `ThreadSafeQueue<std::function<void()>>`.
+The one thing to take away *now* is the template: this single class definition will work for `ThreadSafeQueue<int>`, `ThreadSafeQueue<std::string>`, or `ThreadSafeQueue<Task>` — the [mutex](../Chapter2/sharing_data.md) and [condition variable](../Chapter2/condition_variables.md) logic is written once and reused for every element type. It composes the whole toolkit: a template over `T`, RAII [locks](ownership.md), a condition variable, and [`std::move`](move_semantics.md) to put elements in and take them out without copying. This is exactly the structure a [thread pool](../Chapter3/thread_pools.md) is built on — once you have it, the pool's task queue is one line: `ThreadSafeQueue<std::function<void()>>`.
 
 !!! note "Template code usually lives entirely in headers"
     The compiler must see a template's *full definition* to instantiate it for your type, so class and function templates normally live wholly in a `.hpp` header — there is no separate `.cpp`. This is why so many generic libraries (and the standard library) are header-only. It is also why heavy template use slows compilation: every translation unit that uses the template recompiles it.
@@ -82,14 +87,7 @@ This single class works for `ThreadSafeQueue<int>`, `ThreadSafeQueue<std::string
 
 ## Deduction and `auto`
 
-You rarely spell out template arguments — the compiler **deduces** them from the call (`max3(3, 7, 2)` deduces `T = int`). The same machinery powers `auto`, which deduces a variable's type from its initialiser:
-
-```cpp
-auto count = readings.size();              // std::size_t, deduced
-for (const auto& reading : readings) { }   // element type, deduced — the everyday use
-```
-
-`auto` is not a runtime feature; it is compile-time deduction, the same engine templates use. Reach for it when the type is long or obvious (iterators, `size()` results, range-`for` elements), and spell the type out when it aids clarity.
+You rarely spell out template arguments — the compiler **deduces** them from the call (`max3(3, 7, 2)` deduces `T = int`). The `auto` you already used in AIS1003 is the same compile-time deduction applied to variables, so there is nothing new to learn here: it just leans on the template machinery you have now seen.
 
 ---
 

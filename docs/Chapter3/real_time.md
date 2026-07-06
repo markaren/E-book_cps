@@ -89,6 +89,14 @@ Because `next` advances by exactly one period each time regardless of how long t
 !!! tip "Detect overruns"
     If `work()` ever takes longer than the period, `next` will already be in the past when you reach `sleep_until`, which returns immediately. You can detect this — `if (steady_clock::now() > next) ++overruns;` — and report it. A loop silently failing to keep up is exactly the kind of timing bug real-time discipline is meant to catch.
 
+!!! warning "Windows sleeps in ~15.6 ms lumps by default"
+    On Windows the scheduler's timer tick is about **15.6 ms** (64 Hz), so `sleep_for`/`sleep_until` for anything shorter typically rounds *up* to the next tick — ask for 1 ms and you may get 15. A 100 Hz loop written naïvely on Windows therefore stutters badly. Two things to keep straight:
+
+    - **Measurement stays precise.** `steady_clock` on Windows is backed by the high-resolution performance counter (QPC), so *timing* how long work took is accurate to well under a microsecond — it is only *sleeping* that is coarse.
+    - **Escape hatches for shorter sleeps.** Call `timeBeginPeriod(1)` (from `winmm`, link `winmm.lib`) to request a 1 ms system timer resolution for your process — a global setting, so pair it with `timeEndPeriod(1)` and use it sparingly. For the tightest loops, sleep for *most* of the interval and then **spin-wait** (busy-loop on `steady_clock`) for the final millisecond or two, trading a little CPU for sharp timing.
+
+    The rule holds everywhere: **measure your actual period, do not assume the sleep gave you what you asked for.** (Linux typically offers ~1 ms or finer granularity out of the box, so this bites hardest on Windows.)
+
 ---
 
 ## Asynchronous events
@@ -107,6 +115,7 @@ When several threads must reach the same point before any continues — "all sen
 - **`std::latch`** — a one-shot countdown. Threads `count_down()`; others `wait()` until the count hits zero. Use it once, e.g. "wait until all worker threads have finished initialising."
 - **`std::barrier`** — a *reusable* latch. Each thread calls `arrive_and_wait()` at the end of a phase; all are released together, and the barrier resets for the next cycle. Ideal for a loop where N threads must stay in lockstep round after round.
 
+<!-- no-ce -->
 ```cpp
 // Each cycle: all worker threads sample, then all proceed together.
 std::barrier sync(numWorkers);
@@ -134,7 +143,7 @@ Here is the hard truth about running control code on a Pi or a PC: **stock Linux
     pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch);
     ```
 
-- **A `PREEMPT_RT` kernel.** A patched Linux kernel that makes almost all of the kernel preemptible, turning typical worst-case latencies from milliseconds into tens of microseconds. This is how Linux is used for serious motion control.
+- **A `PREEMPT_RT` kernel.** A configuration that makes almost all of the kernel preemptible, turning typical worst-case latencies from milliseconds into tens of microseconds. Long shipped as an out-of-tree patch set, `PREEMPT_RT` was **merged into the mainline Linux kernel in 6.12 (late 2024)** — it is now a config option you enable rather than a separate patch to apply. This is how Linux is used for serious motion control.
 - **CPU isolation.** Pinning your real-time thread to a core that the OS keeps other work off (`isolcpus`, `taskset`).
 
 These are knobs you reach for *after* measuring and finding the default scheduling inadequate — not by default.

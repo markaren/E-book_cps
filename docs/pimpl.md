@@ -10,8 +10,8 @@ In C++, a class's **private** members are still written in its header. That feel
 
 Two costs follow from that:
 
-- **Recompilation cascades.** Every translation unit that `#include`s `widget.hpp` depends on the *full* class layout. Add or change a single private field — even one nobody outside the class touches — and **every file that includes the header must recompile**. In a large project, one trivial edit can trigger a rebuild of hundreds of files. This coupling between a header and its clients is exactly what slows [large builds](Chapter6/dependencies.md) to a crawl.
-- **Leaked dependencies.** If a private member has type `cv::VideoCapture` or an Asio `io_context`, the header must `#include` that library's header. Now *every* client of your class transitively pulls in [OpenCV](Chapter7/opencv.md) or [Asio](Chapter4/networking.md) — longer compiles for them, and your implementation detail leaking into their world.
+- **Recompilation cascades.** Every translation unit that `#include`s `widget.hpp` depends on the *full* class layout. Add or change a single private field — even one nobody outside the class touches — and **every file that includes the header must recompile**. In a large project, one trivial edit can trigger a rebuild of hundreds of files. This coupling between a header and its clients is exactly what slows [large builds](Chapter5/cmake.md) to a crawl.
+- **Leaked dependencies.** If a private member has type `cv::VideoCapture` or an Asio `io_context`, the header must `#include` that library's header. Now *every* client of your class transitively pulls in [OpenCV](Chapter6/opencv.md) or [Asio](Chapter4/networking.md) — longer compiles for them, and your implementation detail leaking into their world.
 
 Pimpl removes both costs by making the header's view of the class **never change** when the implementation does.
 
@@ -182,7 +182,7 @@ Pimpl is not free, and it is not for every class:
 So treat it as a deliberate trade: you pay a little runtime cost and some boilerplate to buy **build-time decoupling**, **hidden dependencies**, and a **stable [ABI](portability.md)**. Reach for it when:
 
 - A header is **included widely** and its internals **change often** — the firewall cuts rebuild times.
-- A class's private members would **drag heavy or platform-specific headers** into the public interface — wrap [OpenCV](Chapter7/opencv.md), [Asio](Chapter4/networking.md), or a vendor SDK and keep the `#include` in the `.cpp`.
+- A class's private members would **drag heavy or platform-specific headers** into the public interface — wrap [OpenCV](Chapter6/opencv.md), [Asio](Chapter4/networking.md), or a vendor SDK and keep the `#include` in the `.cpp`.
 - You ship a **shared library** whose public classes must keep a stable binary layout as you evolve the internals.
 
 Skip it for small value types, performance-critical hot-path classes where the indirection bites, and templates (the implementation has to be visible to instantiate, so pimpl and templates do not mix).
@@ -192,7 +192,7 @@ Skip it for small value types, performance-critical hot-path classes where the i
 ## Summary
 
 - **Pimpl** moves a class's private members into an opaque `struct Impl`, **forward-declared** in the header and **defined** in the `.cpp`, reached through a single [`std::unique_ptr<Impl>`](Chapter1/smart_pointers.md).
-- It buys a **compilation firewall** (changing the implementation recompiles only one `.cpp`, not every client) and **hides dependencies** so heavy headers like [OpenCV](Chapter7/opencv.md) or [Asio](Chapter4/networking.md) never leak into the public interface — both directly attacking [slow large builds](Chapter6/dependencies.md).
+- It buys a **compilation firewall** (changing the implementation recompiles only one `.cpp`, not every client) and **hides dependencies** so heavy headers like [OpenCV](Chapter6/opencv.md) or [Asio](Chapter4/networking.md) never leak into the public interface — both directly attacking [slow large builds](Chapter5/cmake.md).
 - **The destructor rule:** `unique_ptr` needs the *complete* type to delete it, so **declare `~Widget()` in the header and `= default` it in the `.cpp`** (below `struct Impl`). The same goes for **move-assignment** and any **copy** operations.
 - Declaring the destructor suppresses the implicit moves — re-declare them and `= default` them in the `.cpp`. Copying needs a hand-written **deep copy**, since `unique_ptr` is [move-only](Chapter1/move_semantics.md).
 - It costs an allocation, an indirection, and lost inlining — apply it to **widely-included, often-changing, dependency-heavy, or ABI-stable** classes, not to everything.
