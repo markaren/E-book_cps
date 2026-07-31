@@ -127,6 +127,7 @@ plugins:
             ROS2 Concepts: ROS2-konsepter
             ROS2 on Windows: ROS2 på Windows
             ROS2 Workspace: ROS2-arbeidsområdet
+            Camera & Detections: Kamera og deteksjoner
             Reference: Referanse
             Debugging Concurrent Programs: Feilsøke samtidige programmer
             Portability: Portabilitet
@@ -196,6 +197,7 @@ nav:
     - ROS2 Concepts: Chapter7/ros2_concepts.md
     - ROS2 on Windows: Chapter7/ros2_windows.md
     - ROS2 Workspace: Chapter7/ros2_workspace.md
+    - Camera & Detections: Chapter7/camera_topics.md
     - Exercises: Chapter7/exercises.md
   - Reference:
     - Embedded Linux: embedded_linux.md

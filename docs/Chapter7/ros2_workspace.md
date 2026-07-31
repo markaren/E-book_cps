@@ -140,4 +140,4 @@ Put the concepts together with the [talker/listener pair](ros2_concepts.md) from
 - **Two build systems, one source of truth:** colcon does the real build; the **root `CMakeLists.txt` exists only as a CLion entry point**. It sets `CMAKE_PREFIX_PATH` into the [pixi env](ros2_windows.md), `find_package(ament_cmake)`, and `add_subdirectory` per package so the IDE can resolve code.
 - **`add_custom_target` wrappers** run `colcon build --base-paths src --packages-select <pkg> --merge-install` so you can build from CLion — launch the IDE inside the `pixi shell`.
 - Worked flow: build a **talker/listener**, run them (DDS discovery, no broker), inspect with **`ros2 topic echo`**, then **publish your simulator's sensor topic** into the graph.
-- Next: the [exercises](exercises.md).
+- Next: [Camera & Detections](camera_topics.md) — your simulator's camera and detector on the graph.
