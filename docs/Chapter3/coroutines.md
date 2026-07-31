@@ -89,7 +89,7 @@ awaitable<void> echo(tcp::socket socket) {
 }
 ```
 
-While this coroutine waits for data, it occupies no thread; the same thread services other connections. Yet there are no callbacks and no manual state machine — the `for` loop and locals read exactly like blocking code. That readability is coroutines' biggest practical win over the [callback-](futures.md)heavy async styles that preceded them.
+While this coroutine waits for data, it occupies no thread; the same thread services other connections. Yet there are no callbacks and no manual state machine — the `for` loop and locals read exactly like blocking code. That readability is coroutines' biggest practical win over the callback-heavy async styles that preceded them, where each step's continuation was a separate handler function and the control flow was scattered across them.
 
 ---
 
@@ -100,7 +100,7 @@ Here is what trips people up. C++20 added coroutines as a *language* feature but
 So the practical guidance is:
 
 - **Understand the concept** — suspend/resume, cooperative scheduling, the I/O-bound use case. That is what this chapter is for, and what you will be asked about.
-- **Use a library for the machinery.** Meet coroutines through something that provides the types and an event loop: **Boost.Asio** (`awaitable`, `co_spawn`) for networking, `std::generator` (C++23) for sequences, or libraries like **cppcoro**. Do not hand-roll `promise_type` for course work.
+- **Use a library for the machinery.** Meet coroutines through something that provides the types and an event loop: **Boost.Asio** (`awaitable`, `co_spawn`) for async I/O and networking, and **`std::generator` (C++23)** for lazy sequences. Avoid the older `cppcoro` — once the standard reference, it is now **unmaintained and archived**; if you want a standalone coroutine-task library, a maintained option such as **libcoro** is the safer pick. Do not hand-roll `promise_type` for course work.
 - **Reach for simpler tools first.** For most AIS2203 tasks, [threads](../Chapter2/threads.md), [futures](futures.md) and a [thread pool](thread_pools.md) are the right answer. Coroutines earn their keep at high connection counts or in genuinely async pipelines — reach for them when you hit that, through a library, not before.
 
 ---
@@ -110,5 +110,5 @@ So the practical guidance is:
 - A **coroutine** is a function that can **suspend** and later **resume** with its local state intact, marked by `co_await`, `co_yield`, or `co_return`.
 - Scheduling is **cooperative** (it suspends only at explicit points), unlike a thread's **preemptive** scheduling — so single-threaded coroutine code largely sidesteps data races.
 - They excel at **I/O-bound** work: thousands of mostly-waiting tasks (e.g. network connections) cost far less than thousands of threads, because a suspended coroutine uses no thread. They do **not** add parallelism on their own.
-- C++20 coroutines are **low-level**: minimal standard-library support, `std::generator` only in C++23, and writing your own coroutine type by hand is advanced. **Use a library** (Boost.Asio, cppcoro) and reach for [threads](../Chapter2/threads.md)/[futures](futures.md)/[pools](thread_pools.md) for everyday work.
+- C++20 coroutines are **low-level**: minimal standard-library support, `std::generator` only in C++23, and writing your own coroutine type by hand is advanced. **Use a library** — Boost.Asio for async I/O, `std::generator` for sequences (avoid the archived cppcoro) — and reach for [threads](../Chapter2/threads.md)/[futures](futures.md)/[pools](thread_pools.md) for everyday work.
 - Next: [Real-Time & Timing](real_time.md) — making concurrent work happen not just correctly, but *on time*.

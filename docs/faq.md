@@ -6,7 +6,7 @@ Short answers to questions that come up every year. Most link to the chapter wit
 
 ### My threaded program gives a different answer every run (or crashes sometimes).
 
-Classic symptom of a **[data race](Chapter2/sharing_data.md)**: two threads touch the same data with no synchronisation. Protect the shared data with a [mutex](Chapter2/sharing_data.md) or make it [atomic](Chapter2/atomics.md), and confirm it is gone by building with [ThreadSanitizer](debugging_concurrency.md) (`-fsanitize=thread`). "It usually works" is exactly what a race looks like.
+Classic symptom of a **[data race](Chapter2/sharing_data.md)**: two threads touch the same data with no synchronisation. Protect the shared data with a [mutex](Chapter2/sharing_data.md) or make it [atomic](Chapter2/atomics.md), and confirm it is gone by building with [ThreadSanitizer](debugging_concurrency.md) (`-fsanitize=thread`). "It usually works" is exactly what a race looks like. On Windows, TSan needs a Linux toolchain — run it under [WSL2](debugging_concurrency.md) (MSVC's native `/fsanitize=address` finds memory bugs, not races).
 
 ### My program hangs and never finishes.
 
@@ -28,9 +28,9 @@ You created a `std::thread` and neither `join()`ed nor `detach()`ed it before it
 
 [TCP is a byte stream, not a message queue](Chapter4/sockets.md) — it does not preserve your `send()` boundaries. You must **frame** messages yourself with a length prefix or a delimiter (e.g. a newline after each [JSON](Chapter4/serialization.md) object). UDP and [MQTT](Chapter4/mqtt_rpc.md) preserve boundaries; TCP and [serial](Chapter4/serial.md) do not.
 
-### My `std::execution::par` algorithm isn't faster (or won't link).
+### My `std::execution::par` algorithm isn't faster (or won't compile).
 
-On GCC/Clang the [parallel algorithms](Chapter3/parallel_algorithms.md) need **Intel TBB** linked (`find_package(TBB)` + `TBB::tbb`), or `par` silently runs sequentially. And parallelism has overhead — it only pays off on *large* data; on small ranges the sequential version wins. Measure.
+It depends on the standard library. With **libstdc++** (GCC, MinGW), the [parallel algorithms](Chapter3/parallel_algorithms.md) are backed by **Intel TBB**, so without it linked (`find_package(TBB)` + `TBB::tbb`) a `par` call typically **fails to compile** — a missing-header/undefined-reference error, not a silent fall-back. **MSVC** ships its own parallel backend and runs `par` in parallel **without** TBB. Either way, parallelism has overhead — it only pays off on *large* data; on small ranges the sequential version wins. Measure.
 
 ### Should I use threads, `std::async`, or coroutines?
 
@@ -42,16 +42,20 @@ Its **reference count is** — copying/destroying `shared_ptr`s across threads i
 
 ### How do I add a library like OpenCV, Boost, or nlohmann/json?
 
-Use **[vcpkg](Chapter6/dependencies.md)**: declare it in `vcpkg.json`, configure CMake with vcpkg's toolchain file, then `find_package` + `target_link_libraries`. For one or two dependencies, CMake's [`FetchContent`](Chapter6/cmake.md) also works.
+Use **[vcpkg](Chapter5/dependencies.md)**: declare it in `vcpkg.json`, configure CMake with vcpkg's toolchain file, then `find_package` + `target_link_libraries`. For one or two dependencies, CMake's [`FetchContent`](Chapter5/cmake.md) also works.
 
 ### Where did my output file (or `readings.txt`) go?
 
 Your program runs from its **working directory**, which in CLion is the *build* folder (e.g. `cmake-build-debug/`), not your project folder. That is where output files appear and where input files are looked for — put them there or set the working directory under **Run → Edit Configurations**.
 
+### How is the semester project assessed?
+
+At an **oral exam**: you present the system you built — the simulator, the concurrency architecture, the communication, the ROS2 integration — and answer questions about *why* it is built the way it is. [Presenting Your Project](presenting.md) is the checklist for being ready; read it well before exam week, not the night before. For dates and formalities, see the course page on Blackboard/NTNU's course description.
+
 ### Do I need a Raspberry Pi or other hardware?
 
-**No.** This year the project runs in a [3D simulator](Chapter7/virtual_environments.md) on your own machine. The [Embedded Linux](embedded_linux.md) reference is background — the same C++ you write for the simulated robot would run on a real Pi, but you do not need one for the coursework.
+**No.** This year the project runs in a [3D simulator](Chapter6/virtual_environments.md) on your own machine. The [Embedded Linux](embedded_linux.md) reference is background — the same C++ you write for the simulated robot would run on a real Pi, but you do not need one for the coursework.
 
 ### Can I call my C++ code from Python?
 
-Yes. Expose a C interface with [`extern "C"`](Chapter6/python_interop.md) and call it with `ctypes`, or use **pybind11** to expose C++ functions and classes directly as a Python module. ([Calling C++ from Python](Chapter6/python_interop.md))
+Yes. Expose a C interface with [`extern "C"`](Chapter5/python_interop.md) and call it with `ctypes`, or use **pybind11** to expose C++ functions and classes directly as a Python module. ([Calling C++ from Python](Chapter5/python_interop.md))

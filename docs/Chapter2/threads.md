@@ -6,7 +6,7 @@
 
 ## What a thread can run
 
-A `std::thread` runs any **callable**: a free function, a lambda, a function object, or a member function. The thread starts executing it *immediately* on construction.
+A `std::thread` runs any **callable**: a free function, a lambda, a function object, or a member function. The thread *begins running concurrently from construction* — the moment the `std::thread` is built, its callable may already be executing on another core.
 
 ```cpp
 #include <iostream>
@@ -56,14 +56,19 @@ int main() {
 
 There is one rule that surprises everyone the first time, and it is a frequent source of bugs:
 
-!!! danger "Arguments are *copied* into the thread, even reference parameters"
-    `std::thread` copies each argument into storage owned by the new thread, then passes those copies to your function. So even though `greet` takes `const std::string&`, the thread holds its *own* copy of the string. If you genuinely want the thread to refer to your original object, you must say so explicitly with `std::ref`:
+!!! danger "Arguments are *copied* into the thread — so `std::ref` is how you share"
+    `std::thread` copies each argument into storage owned by the new thread, then passes those copies to your callable. Two consequences follow, depending on how the parameter is declared:
+
+    - **A by-value or `const&` parameter** (like `greet`'s `const std::string&`) silently binds to the thread's *own* copy. The function runs fine — it just never sees your original object.
+    - **A non-`const` reference parameter** (`std::string&`) will **not even compile**. The stored copies are handed to your function as rvalues, and a non-`const` lvalue reference cannot bind to an rvalue — so the mistake is caught by the compiler, not discovered at runtime.
+
+    Either way, to make the thread act on your *original* object you must say so explicitly with `std::ref`:
 
     ```cpp
-    std::thread t(updateInPlace, std::ref(myObject));
+    std::thread t(updateInPlace, std::ref(myObject));   // pass the real object, not a copy
     ```
 
-    Without `std::ref`, `updateInPlace` would modify a copy and your original would be untouched. With it, you are promising the original **outlives the thread** — if it does not, the thread is left holding a dangling reference (see the pitfalls below).
+    `std::ref` wraps the argument so the reference survives the copy. In return you are promising the original **outlives the thread** — if it does not, the thread is left holding a dangling reference (see the pitfalls below).
 
 For a member function, pass a pointer to the function and the object to call it on:
 
@@ -181,6 +186,9 @@ int main() {
 
 If the callable's first parameter is a `std::stop_token`, `std::jthread` supplies one automatically. Calling `request_stop()` (or letting the `jthread` destructor do it) sets the token, the loop sees `stop_requested()` become true, and the thread ends on its own terms — finishing the current iteration rather than being killed halfway. This is the standard pattern for a worker loop that must run "until told otherwise": a sensor poller, a telemetry sender, a control loop. (`std::this_thread::sleep_for` and the `<chrono>` durations come from [Time with std::chrono](../Chapter1/chrono.md).)
 
+!!! warning "`request_stop()` does not wake a thread sleeping in `condition_variable::wait`"
+    Setting the stop token only flips a flag — it does **not** interrupt a thread already blocked in a plain `std::condition_variable::wait`. If your worker sleeps on a condition variable, requesting a stop will not wake it, and its destructor's implicit `request_stop()` then `join()` can hang forever. Two fixes: use the stop-aware overload `std::condition_variable_any::wait(lock, stopToken, predicate)`, which returns when the token is set; or register a callback that notifies the CV, or set your own atomic flag *and* call `notify_all()` yourself so the waiter re-checks its predicate and exits.
+
 ---
 
 ## Pitfalls to internalise
@@ -190,7 +198,7 @@ Most thread-creation bugs are **lifetime** bugs: the thread outlives something i
 | Pitfall | What goes wrong | Fix |
 |---------|-----------------|-----|
 | Capturing a local by reference | A lambda captures `[&x]`, the thread outlives `x`'s scope, and reads a dangling reference. | Capture by value (`[x]`), or guarantee the thread joins before `x` dies. |
-| Forgetting `std::ref` | You meant to share an object but the thread silently got a copy; your changes vanish. | Pass `std::ref(obj)` — and ensure `obj` outlives the thread. |
+| Forgetting `std::ref` | You meant to share an object. With a `const&`/by-value parameter the thread silently works on a *copy*; with a non-`const` `T&` parameter the code *fails to compile* (the copy binds as an rvalue). | Pass `std::ref(obj)` — and ensure `obj` outlives the thread. |
 | Detaching and returning | A detached thread keeps using locals from a function that has already returned. | Don't detach; use `std::jthread` and join. |
 
 The unifying rule: **a thread must not outlive the data it borrows.** When you cannot guarantee that, either give the thread its own copy, or hand it shared ownership with a [`std::shared_ptr`](../Chapter1/smart_pointers.md).

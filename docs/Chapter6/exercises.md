@@ -1,209 +1,186 @@
-# Chapter 5 Exercises
+# Part 6 Exercises
 
-Work through these after reading Chapter 5 (Building Larger Projects). Unlike the earlier chapters, these are about **project structure and tooling**, so the "solutions" are `CMakeLists.txt` files, manifests, and small multi-file setups rather than single programs — build them in CLion and confirm they configure and run.
+Work through these after reading Part 6 (Computer Vision). **Try each one yourself before revealing the solution.** Type the code into CLion and run it.
 
 When you open a solution it appears **blurred** — click it once more to reveal it.
 
+The first three are runnable programs that need **no OpenCV** — they exercise the *maths and structure* behind a vision pipeline, which is where the real bugs live. The last is a **design** exercise.
+
 ---
 
-## 1. Split into library, app, and test
+## 1. Intersection over Union
 
-*Practises: [CMake for Multi-Target Projects](cmake.md)*
+*Practises: [Deep Vision](deep_vision.md)*
 
-Take a one-file program and restructure it into **three targets**: a `stats` *library* holding a `mean(const std::vector<double>&)` function, a `stats_app` *executable* that calls it, and a `tests` *executable* (Catch2 via `FetchContent`) that checks it. Use the conventional `include/` + `src/` + `tests/` layout.
+Detectors produce overlapping boxes for the same object, and *non-maximum suppression* removes duplicates by measuring how much two boxes overlap — the **Intersection over Union** (IoU): the area they share divided by the area they jointly cover. Write `iou(a, b)` for two axis-aligned boxes and test it on two overlapping squares.
 
-> Hint: `add_library(stats src/stats.cpp)` with `target_include_directories(stats PUBLIC include)`; both the app and the tests `target_link_libraries(... PRIVATE stats)`. Pull Catch2 with `FetchContent`.
+> Hint: the intersection rectangle has corners `max(x1)`, `max(y1)`, `min(x2)`, `min(y2)`; its width/height clamp to `0` if the boxes do not overlap. Union = areaA + areaB − intersection.
 
 ??? success "Show solution"
 
     <div class="spoiler" markdown title="Click to reveal">
 
-    Layout:
+    ```cpp
+    #include <algorithm>
+    #include <iostream>
 
-    ```
-    stats/
-    ├── CMakeLists.txt
-    ├── include/stats.hpp     // declaration:  double mean(const std::vector<double>&);
-    ├── src/stats.cpp         // definition
-    ├── src/main.cpp          // calls mean(), prints the result
-    └── tests/test_stats.cpp  // Catch2 TEST_CASE checking mean()
-    ```
+    struct Box { double x1, y1, x2, y2; };   // top-left and bottom-right corners
 
-    `CMakeLists.txt`:
+    double iou(const Box& a, const Box& b) {
+        double ix1 = std::max(a.x1, b.x1);
+        double iy1 = std::max(a.y1, b.y1);
+        double ix2 = std::min(a.x2, b.x2);
+        double iy2 = std::min(a.y2, b.y2);
 
-    ```cmake
-    cmake_minimum_required(VERSION 3.16)
-    project(stats CXX)
+        double iw = std::max(0.0, ix2 - ix1);     // 0 if no horizontal overlap
+        double ih = std::max(0.0, iy2 - iy1);
+        double intersection = iw * ih;
 
-    # --- the library: the logic, reusable by both app and tests ---
-    add_library(stats src/stats.cpp)
-    target_include_directories(stats PUBLIC include)
-    target_compile_features(stats PUBLIC cxx_std_20)
+        double areaA = (a.x2 - a.x1) * (a.y2 - a.y1);
+        double areaB = (b.x2 - b.x1) * (b.y2 - b.y1);
+        double uni = areaA + areaB - intersection;
 
-    # --- the application ---
-    add_executable(stats_app src/main.cpp)
-    target_link_libraries(stats_app PRIVATE stats)
+        return uni > 0.0 ? intersection / uni : 0.0;
+    }
 
-    # --- the tests ---
-    include(FetchContent)
-    FetchContent_Declare(
-        Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG        v3.5.2)
-    FetchContent_MakeAvailable(Catch2)
-
-    add_executable(tests tests/test_stats.cpp)
-    target_link_libraries(tests PRIVATE stats Catch2::Catch2WithMain)
-
-    enable_testing()
-    add_test(NAME unit COMMAND tests)
+    int main() {
+        Box a{0, 0, 2, 2};      // area 4
+        Box b{1, 1, 3, 3};      // area 4, overlapping in a 1×1 corner
+        std::cout << iou(a, b) << "\n";   // 1 / (4 + 4 - 1) = 0.142857
+    }
     ```
 
-    The point is that the logic lives in **one** target, `stats`, which both `stats_app` and `tests` link — so the tests exercise exactly the code the app runs, with no duplication. `include/` is marked **`PUBLIC`** on the library, so linking `stats` automatically puts its headers on the app's and tests' include paths. Run the app from the dropdown; run the tests with `ctest` (or directly). This is the same library-plus-app-plus-tests shape every non-trivial project converges on.
+    The two squares share a 1×1 corner (intersection = 1) and jointly cover 7 units (union = 4 + 4 − 1), so IoU ≈ `0.143`. Clamping the intersection width and height to `0` is what makes non-overlapping boxes return `0` instead of a spurious negative area. A detector keeps the highest-confidence box and discards any other whose IoU with it exceeds a threshold (say 0.5) — that is non-maximum suppression, the post-processing step from [Model Deployment](onnx.md).
 
     </div>
 
 ---
 
-## 2. Pull in a dependency with vcpkg
+## 2. Decode a YOLO box
 
-*Practises: [Dependencies with vcpkg](dependencies.md)*
+*Practises: [Deep Vision](deep_vision.md), [Model Deployment & ONNX](onnx.md)*
 
-Add **nlohmann/json** to a project through vcpkg manifest mode and use it to print a small JSON object. Write the `vcpkg.json`, wire it into CMake, and configure with the vcpkg toolchain file.
+YOLO outputs each box as a **normalised centre and size**: `(cx, cy, w, h)`, all in `0..1` relative to the image. To draw or act on it you need **pixel corners** `(xmin, ymin, xmax, ymax)`. Write the conversion for a given image width and height.
 
-> Hint: declare `nlohmann-json` (vcpkg package name) in `vcpkg.json`; in CMake use `find_package(nlohmann_json CONFIG REQUIRED)` (the CMake target name) and link `nlohmann_json::nlohmann_json`. Configure with `-DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake`.
+> Hint: the top-left corner is `(cx − w/2, cy − h/2)`, still normalised; multiply by the image dimensions to get pixels. The box width in pixels is `w * imageWidth`.
 
 ??? success "Show solution"
 
     <div class="spoiler" markdown title="Click to reveal">
-
-    `vcpkg.json`:
-
-    ```json
-    {
-      "name": "json-demo",
-      "version": "0.1.0",
-      "dependencies": [ "nlohmann-json" ]
-    }
-    ```
-
-    `CMakeLists.txt`:
-
-    ```cmake
-    cmake_minimum_required(VERSION 3.16)
-    project(json_demo CXX)
-
-    find_package(nlohmann_json CONFIG REQUIRED)
-
-    add_executable(json_demo main.cpp)
-    target_compile_features(json_demo PRIVATE cxx_std_20)
-    target_link_libraries(json_demo PRIVATE nlohmann_json::nlohmann_json)
-    ```
-
-    `main.cpp`:
 
     ```cpp
     #include <iostream>
-    #include <nlohmann/json.hpp>
+
+    struct PixelBox { int xmin, ymin, xmax, ymax; };
+
+    PixelBox yoloToPixels(double cx, double cy, double w, double h, int imgW, int imgH) {
+        double x = (cx - w / 2.0) * imgW;        // left edge, in pixels
+        double y = (cy - h / 2.0) * imgH;        // top edge, in pixels
+        double boxW = w * imgW;
+        double boxH = h * imgH;
+        return { static_cast<int>(x), static_cast<int>(y),
+                 static_cast<int>(x + boxW), static_cast<int>(y + boxH) };
+    }
 
     int main() {
-        nlohmann::json j;
-        j["sensor"] = "boiler";
-        j["value"]  = 42.5;
-        std::cout << j.dump() << "\n";   // {"sensor":"boiler","value":42.5}
+        // A box centred in the image, half its width and a third of its height, on 640×480:
+        PixelBox p = yoloToPixels(0.5, 0.5, 0.5, 0.33, 640, 480);
+        std::cout << p.xmin << "," << p.ymin << " - " << p.xmax << "," << p.ymax << "\n";
+        // 160,160 - 480,319
     }
     ```
 
-    Configure (vcpkg reads the manifest and builds the dependency on first run):
-
-    ```bash
-    cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=<path-to-vcpkg>/scripts/buildsystems/vcpkg.cmake
-    cmake --build build
-    ```
-
-    Note the two different names: **`nlohmann-json`** is the vcpkg *package*, **`nlohmann_json::nlohmann_json`** is the CMake *target*. The link is **`PRIVATE`** because `nlohmann/json.hpp` is used only in `main.cpp` — if instead it appeared in a library's public header, it would need to be `PUBLIC` (exercise 4). In CLion, set the toolchain file once under **Settings → Build → CMake** and you never type it again.
+    Converting centre+size to corner+size, then scaling normalised coordinates by the image dimensions, is exactly the post-processing every YOLO deployment does between `net.forward()` and drawing a box. Getting it wrong — forgetting the `/2`, or mixing up normalised and pixel units — is the classic "the model works but the boxes are in the wrong place" bug from [Model Deployment](onnx.md).
 
     </div>
 
 ---
 
-## 3. Call a C++ function from Python
+## 3. A frame pipeline that never stalls
 
-*Practises: [Calling C++ from Python](python_interop.md)*
+*Practises: [Model Deployment & ONNX](onnx.md), [Condition Variables](../Chapter2/condition_variables.md)*
 
-Expose a C++ function to Python. Write a `square(int)` behind a C interface, build it as a **shared** library, and call it from Python with `ctypes`.
+Model the capture→inference pipeline with **no OpenCV**: a producer "captures" frames (just integers) and a consumer "processes" them, connected by a thread-safe queue, so the producer never waits for the slow consumer. The producer pushes five frames then closes the queue; the consumer drains it and exits cleanly.
 
-> Hint: wrap the declaration in `extern "C"` so it is not name-mangled; build with `add_library(... SHARED ...)` and `set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)`; in Python, `ctypes.CDLL` the library and set `argtypes`/`restype` before calling.
+> Hint: this is the [producer/consumer](../Chapter2/condition_variables.md) pattern. The consumer `pop`s in a loop; have `pop` return a `std::optional<int>` that is empty once the queue is closed *and* drained, so the consumer's loop ends naturally.
 
 ??? success "Show solution"
 
     <div class="spoiler" markdown title="Click to reveal">
 
-    `mathlib.hpp` — the C interface:
-
     ```cpp
-    extern "C" {
-        int square(int x);
+    #include <condition_variable>
+    #include <iostream>
+    #include <mutex>
+    #include <optional>
+    #include <queue>
+    #include <thread>
+
+    class FrameQueue {
+    public:
+        void push(int frame) {
+            { std::lock_guard<std::mutex> lock(mutex_); queue_.push(frame); }
+            cv_.notify_one();
+        }
+        void close() {
+            { std::lock_guard<std::mutex> lock(mutex_); closed_ = true; }
+            cv_.notify_all();
+        }
+        std::optional<int> pop() {                  // empty when closed and drained
+            std::unique_lock<std::mutex> lock(mutex_);
+            cv_.wait(lock, [this] { return !queue_.empty() || closed_; });
+            if (queue_.empty()) return std::nullopt;
+            int frame = queue_.front();
+            queue_.pop();
+            return frame;
+        }
+    private:
+        std::mutex mutex_;
+        std::condition_variable cv_;
+        std::queue<int> queue_;
+        bool closed_ = false;
+    };
+
+    int main() {
+        FrameQueue frames;
+
+        std::jthread inference([&] {
+            while (auto frame = frames.pop()) {     // stops when pop() returns nullopt
+                std::cout << "processed frame " << *frame << "\n";
+            }
+        });
+
+        for (int i = 1; i <= 5; ++i) {
+            frames.push(i);                          // "capture"
+        }
+        frames.close();                              // no more frames coming
     }
     ```
 
-    `mathlib.cpp` — ordinary C++ behind it:
-
-    ```cpp
-    #include "mathlib.hpp"
-    int square(int x) { return x * x; }
-    ```
-
-    `CMakeLists.txt`:
-
-    ```cmake
-    cmake_minimum_required(VERSION 3.16)
-    project(mathlib CXX)
-
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)   # export symbols on Windows
-    add_library(mathlib SHARED mathlib.cpp)
-    ```
-
-    `use.py`:
-
-    ```python
-    import ctypes
-
-    lib = ctypes.CDLL("./libmathlib.so")   # "mathlib.dll" on Windows
-    lib.square.argtypes = [ctypes.c_int]
-    lib.square.restype  = ctypes.c_int
-
-    print(lib.square(7))                    # 49
-    ```
-
-    `extern "C"` gives `square` a plain, unmangled symbol name that `ctypes` can find — without it, the C++ compiler would emit something like `_Z6squarei` and the lookup would fail. The library must be **`SHARED`** (Python loads a binary at run time, not a header), and the `argtypes`/`restype` declarations are essential: omit them and `ctypes` assumes `int` and would mishandle anything else. For a real API you would wrap this in a Python class so callers never touch `ctypes` — or reach for **pybind11** to skip the C interface entirely.
+    The capture loop pushes frames and never blocks on inference — exactly the structure of the real [vision pipeline](onnx.md), with `cv::Mat` swapped for `int`. The `std::optional` return lets the consumer's `while` loop end the instant the queue is closed and empty, so the `jthread` joins cleanly. For a *real-time* system you would go one step further and **drop stale frames** — cap the queue and discard the oldest when full — so the consumer always works on a recent frame rather than a growing backlog ([Real-Time & Timing](../Chapter3/real_time.md)).
 
     </div>
 
 ---
 
-## 4. Public or private?
+## 4. Where does inference run?
 
-*Practises: [CMake for Multi-Target Projects](cmake.md)*
+*Practises: [Model Deployment & ONNX](onnx.md)*
 
-Your `robot_core` library depends on two things: **spdlog**, used only *inside* its `.cpp` files for logging, and **Eigen**, whose matrix types appear *in `robot_core`'s public headers*. How should each be linked — `PUBLIC`, `PRIVATE`, or `INTERFACE` — and why does it matter?
+A robot has a 30 FPS camera and must detect obstacles for navigation. Your YOLO model takes about **150 ms per frame** on the Raspberry Pi's CPU (≈ 6–7 FPS). The camera produces frames far faster than the Pi can process them. Decide how to deploy the perception, and justify the trade-offs. There is no single right answer.
 
-> Hint: the test is "does someone who links `robot_core` also need this library?" If it only appears in `.cpp` files, the answer is no; if it appears in a header consumers `#include`, the answer is yes.
+> Hint: 7 FPS of processing against 30 FPS of frames means you *cannot* run the model on every frame. Think about: making inference faster, processing fewer frames, or moving inference elsewhere — and what each costs.
 
 ??? success "Show discussion"
 
     <div class="spoiler" markdown title="Click to reveal">
 
-    ```cmake
-    target_link_libraries(robot_core
-        PUBLIC  Eigen3::Eigen     # appears in robot_core's public headers
-        PRIVATE spdlog::spdlog)   # used only inside robot_core's .cpp files
-    ```
+    A good answer weighs three levers and picks for *this* task (obstacle avoidance):
 
-    **Eigen is `PUBLIC`** because `robot_core`'s headers expose Eigen types — so any code that `#include`s those headers must also see Eigen's headers. Marking it `PUBLIC` propagates Eigen's include paths to every consumer automatically; mark it `PRIVATE` and consumers would get *"`Eigen/Dense` not found"* the moment they used `robot_core`.
+    - **Make inference faster on the Pi.** Use a smaller/quantised model and a smaller input size (e.g. 320×320 instead of 640×640). This raises FPS at some cost to accuracy — often a fine trade for spotting nearby obstacles, where you do not need to read fine detail.
+    - **Process fewer frames, newest first.** You physically cannot do 30 FPS, so **drop stale frames** and always run on the latest one ([the pipeline warning](onnx.md)). Detecting on every 4th–5th frame at low latency is far better for navigation than a growing backlog of old detections — *fresh-but-coarse beats accurate-but-late*.
+    - **Offload inference.** Send frames (or a downscaled stream) over the [network](../Chapter4/sockets.md) to a laptop or a Jetson and get detections back. This buys accuracy and frame rate but adds **network latency and bandwidth**, and a dependency on the link staying up — risky for a safety function if the network drops.
 
-    **spdlog is `PRIVATE`** because it appears only in the implementation — no consumer ever sees it. Keeping it private means it stays a swappable implementation detail (you could replace spdlog with another logger without touching anyone who links `robot_core`), and consumers are not forced to compile against a library they do not use.
-
-    Why it matters: visibility is how a library states its **true interface**. Over-marking things `PUBLIC` leaks implementation details, forces unnecessary recompilation on consumers, and makes the library harder to change; the discipline is **`PRIVATE` by default, `PUBLIC` only when a public header genuinely exposes the dependency**. (`INTERFACE` is the third case — a dependency the target does not use itself but its consumers must, typical of a header-only library that has no `.cpp` of its own.)
+    For obstacle avoidance, the defensible default is **on-device, small model, drop-stale frames**: latency and reliability matter more than precision, and you do not want obstacle detection to fail when the Wi-Fi does. If the task instead needed fine recognition (reading a label, say) and tolerated latency, **offloading** to a stronger machine — or putting a **Jetson with TensorRT** on the robot — would be the better call. The reasoning — matching where inference runs to the task's latency, accuracy, and reliability needs — is the real deliverable.
 
     </div>

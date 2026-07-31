@@ -12,7 +12,7 @@ Modbus comes in three flavours, of which two matter today:
 |---------|-----------|----------------|
 | **Modbus TCP** | TCP/IP over Ethernet | Handled by [TCP](sockets.md) itself |
 | **Modbus RTU** | [Serial](serial.md) (RS-232 / RS-485) | A CRC in each message |
-| Modbus ASCII | Serial, text-encoded | Discontinued — ignore it |
+| Modbus ASCII | Serial, text-encoded | Legacy, rarely used — ignore it |
 
 **Modbus TCP** is the easier one to work with, and what this course uses: it rides on TCP, so the [reliable, ordered delivery](sockets.md) you already understand handles error checking for you, and you just open a socket to port **502**. **Modbus RTU** runs over a [serial line](serial.md) and must do its own integrity checking with a CRC. The application logic — registers and function codes below — is the same for both.
 
@@ -100,7 +100,7 @@ int main() {
 }
 ```
 
-Two details worth noting. We build `bits` *arithmetically* (`high << 16 | low`), which is endian-independent — it does the same thing on any machine. Then `std::memcpy` reinterprets those four bytes as a `float`; `memcpy` is the correct, well-defined way to do this type-pun (a `reinterpret_cast` here would be undefined behaviour). This little function is exactly what a Modbus library does internally — and if a device's manual says its values are "word-swapped," it is telling you to swap `high` and `low`.
+Two details worth noting. We build `bits` *arithmetically* (`high << 16 | low`), which is endian-independent — it does the same thing on any machine. Then `std::memcpy` reinterprets those four bytes as a `float`; `memcpy` is the correct, well-defined way to do this type-pun (a `reinterpret_cast` here would be undefined behaviour). In C++20 you can write the same reinterpretation as a one-liner, `float value = std::bit_cast<float>(bits);` (from `<bit>`), which is `constexpr` and needs no output variable — but `memcpy` remains the portable teaching default and works on every compiler you will meet. This little function is exactly what a Modbus library does internally — and if a device's manual says its values are "word-swapped," it is telling you to swap `high` and `low`.
 
 !!! warning "Read the device's register map"
     A device's documentation lists which register holds what, and in which order multi-register values are packed (some swap the high/low words). There is no universal layout beyond "16-bit, big-endian" — always read the specific device's register map before decoding.

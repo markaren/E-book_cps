@@ -12,17 +12,17 @@ A **resource** is anything your program *acquires* and must later *release*: hea
 
 **RAII** — *Resource Acquisition Is Initialization* — ties that lifetime to a C++ object's lifetime: acquire in the constructor, release in the destructor. Because C++ destroys objects **deterministically** at the end of their scope — including on an early `return` or an exception — the release is guaranteed to happen, exactly once, without you writing cleanup code at every exit.
 
-You have already been relying on RAII types built on this principle:
+You already relied on RAII types built on this principle in AIS1003 (the last two rows are a look ahead to Part 2):
 
 | RAII type | Resource it owns | Released when… |
 |-----------|------------------|----------------|
 | `std::vector`, `std::string` | Heap memory | it goes out of scope |
 | `std::ofstream` | An open file | it goes out of scope |
 | `std::unique_ptr` | A heap object | it goes out of scope |
-| `std::lock_guard` / `std::scoped_lock` | A locked mutex | it goes out of scope ([Sharing Data](../Chapter2/sharing_data.md)) |
-| `std::jthread` | A running thread | it goes out of scope ([Creating Threads](../Chapter2/threads.md)) |
+| `std::lock_guard` / `std::scoped_lock` | A locked mutex | it goes out of scope (Part 2 preview — [Sharing Data](../Chapter2/sharing_data.md)) |
+| `std::jthread` | A running thread | it goes out of scope (Part 2 preview — [Creating Threads](../Chapter2/threads.md)) |
 
-Notice the pattern across all of them: you never call a matching "release" by hand. There is no `vec.free()`, no `file.close()`, no `mutex.unlock()`, no `thread.join()` in correct modern code — the destructor does it. That is RAII's whole promise: **cleanup you cannot forget**.
+Notice the pattern across all of them: you rarely call a matching "release" by hand. You seldom write `vec.free()`, `file.close()`, `mutex.unlock()`, or `thread.join()` — the destructor does it for you. (There are legitimate exceptions: you might call `file.close()` explicitly to *check* it for write errors before the object dies, and a plain `std::thread` — unlike `std::jthread` — must be `join()`ed by hand. But these are deliberate choices, not routine cleanup.) That is RAII's whole promise: **cleanup you cannot forget**.
 
 ```cpp
 #include <iostream>
@@ -63,7 +63,7 @@ Those three map directly onto the tools in the rest of Part 1:
 | **Shared** — many owners | `std::shared_ptr` | [Smart Pointers](smart_pointers.md) |
 | **Borrowed** — *no* ownership | reference `&`, raw pointer `*` | here |
 
-That last row matters as much as the others: a reference or a raw pointer should mean "I am *looking at* this, but I do not own it and will not release it." A function that takes `const std::string&` borrows the string for the call; it must not assume the string outlives the call. This *borrowing* idea is exactly what the lifetime bugs in [Creating Threads](../Chapter2/threads.md) were about — a thread that borrows a local and outlives it.
+That last row matters as much as the others: a reference or a raw pointer should mean "I am *looking at* this, but I do not own it and will not release it." A function that takes `const std::string&` borrows the string for the call; it must not assume the string outlives the call. This *borrowing* idea is exactly what the lifetime bugs in [Creating Threads](../Chapter2/threads.md) will be about — a thread that borrows a local and outlives it.
 
 ---
 
@@ -100,7 +100,7 @@ The counterpart is the **rule of five**: *if* you genuinely manage a raw resourc
 
 Single-threaded, an object's lifetime follows the call stack and is easy to track. Add concurrency and ownership becomes the thing that keeps you out of trouble:
 
-- A thread that **borrows** data must not outlive it — the dangling-reference bug from [Creating Threads](../Chapter2/threads.md). Ownership tells you whether borrowing is even safe.
+- A thread that **borrows** data must not outlive it — the dangling-reference bug [Creating Threads](../Chapter2/threads.md) will show. Ownership tells you whether borrowing is even safe.
 - To hand data **to** a thread for keeps, you **transfer ownership** into it — that is [`std::move`](move_semantics.md), and it is why a `std::thread` and a `std::unique_ptr` are move-only.
 - To let several threads **share** data, you give them **shared ownership** with a [`std::shared_ptr`](smart_pointers.md), so the data lives exactly as long as the last thread needs it.
 - A lock is a resource owned for the duration of a critical section — which is why `std::lock_guard` is RAII, not a manual `lock()`/`unlock()`.

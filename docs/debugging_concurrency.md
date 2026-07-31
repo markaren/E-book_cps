@@ -37,6 +37,9 @@ cmake --build build-tsan
 ./build-tsan/app          # run it — TSan prints any race it observes
 ```
 
+!!! warning "TSan on Windows: you need a Linux toolchain"
+    ThreadSanitizer is **not available on Windows** — not with MSVC, not with MinGW, not with clang-cl. If your CLion default toolchain is Visual Studio or MinGW, `-fsanitize=thread` will not work. The practical route is **WSL2** plus **CLion's WSL toolchain** (Settings → Build, Execution, Deployment → Toolchains → **WSL**): build and run the racy program under a Linux GCC/Clang there, where TSan is fully supported. The sanitiser that *does* run natively on Windows is MSVC's **AddressSanitizer** (`/fsanitize=address`) — but ASan finds **memory** bugs (use-after-free, overruns), **not data races**, so it is no substitute for TSan when you are chasing a race.
+
 Run the [racy counter from Sharing Data](Chapter2/sharing_data.md) under TSan and it prints something like:
 
 ```

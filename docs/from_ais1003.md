@@ -18,9 +18,11 @@ This book does not re-teach the AIS1003 material. You should be comfortable with
 | Tell a value from a reference from a pointer, and use `const` correctly | [Values, References & Pointers](https://markaren.github.io/E-book_cpp/Chapter4/types_refs_ptrs/) |
 | Configure a project with CMake and link a library | [CMake](https://markaren.github.io/E-book_cpp/Chapter2/cmake_intro/) |
 | Handle errors with exceptions and `std::optional` | [Error Handling](https://markaren.github.io/E-book_cpp/Chapter6/error_handling/) |
+| Write and capture in a lambda, and store one in `std::function` | [Lambda Expressions](https://markaren.github.io/E-book_cpp/lambdas/) |
+| Write a simple function or class template | [Templates](https://markaren.github.io/E-book_cpp/Chapter5/templates/) |
 | Write a test with Catch2 | [Testing](https://markaren.github.io/E-book_cpp/Chapter6/testing/) |
 
-We **extend** several of these. [Part 1](Chapter1/ownership.md) revisits ownership, move semantics and smart pointers — not as review, but because concurrency forces you to think about *who owns what* far more carefully than a single-threaded program ever does.
+We **extend** several of these. [Part 1](Chapter1/ownership.md) revisits five topics — [ownership & RAII](Chapter1/ownership.md), [move semantics](Chapter1/move_semantics.md), [smart pointers](Chapter1/smart_pointers.md), [templates](Chapter1/templates.md) and [lambdas & `std::function`](Chapter1/lambdas.md) — not as review, but because concurrency sharpens each one: it forces you to think about *who owns what* far more carefully than a single-threaded program ever does, and it leans on templates and lambdas to build reusable, thread-safe components. (It also adds one genuinely new tool, [`std::chrono`](Chapter1/chrono.md), the vocabulary of every timeout and deadline.)
 
 ---
 
@@ -68,7 +70,7 @@ AIS1003 mentioned Arduino — a microcontroller with no operating system, where 
 | Networking | Add-on shields | Built-in | Built-in |
 | Your program | The only thing running | One process among many | One process among many |
 
-This year the project runs in a **3D simulator** on your PC rather than on real hardware, so you write and test everything on your desktop. The table still matters, though: a Pi runs the *same* C++ and standard library as your laptop, so the code you write for the simulated robot is the code a real one would run. The [Embedded Linux](embedded_linux.md) reference covers what deploying to actual hardware would involve — cross-compiling, hardware pins, running as a service — as background for when you leave the simulator.
+This year the project runs in a **3D simulator** on your PC — built on **[Threepp](https://github.com/markaren/threepp)**, a C++ port of the three.js graphics library — rather than on real hardware, so you write and test everything on your desktop. The table still matters, though: a Pi runs the *same* C++ and standard library as your laptop, so the code you write for the simulated robot is the code a real one would run. The [Embedded Linux](embedded_linux.md) reference covers what deploying to actual hardware would involve — cross-compiling, hardware pins, running as a service — as background for when you leave the simulator.
 
 ---
 

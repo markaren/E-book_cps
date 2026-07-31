@@ -4,7 +4,7 @@ Work through these after reading Chapter 4. **Try each one yourself before revea
 
 When you open a solution it appears **blurred** — click it once more to reveal it.
 
-The first three are runnable programs; the last is a **design** exercise — think it through and write down your reasoning before revealing the discussion.
+Exercises 1–3 are runnable programs; exercise 4 is a **design** exercise — think it through and write down your reasoning before revealing the discussion — and exercise 5 is an optional lab that makes exercise 3's simulation real on an actual socket.
 
 ---
 
@@ -60,7 +60,7 @@ Write `serialize` and `deserialize` for a small `Command { std::string verb; int
 
 A Modbus device reports a 32-bit signed integer across **two** 16-bit registers, **big-endian** (high word first). Write `registersToInt32(high, low)` that reassembles them, and decode the reading `high = 0x0001`, `low = 0x1170`.
 
-> Hint: shift the high register left by 16 bits and OR in the low register: `(high << 16) | low`. Build the value arithmetically (cast `high` to `uint32_t` *before* shifting, or the shift overflows the 16-bit type), then cast to signed.
+> Hint: shift the high register left by 16 bits and OR in the low register: `(high << 16) | low`. Build the value arithmetically, and cast `high` to `uint32_t` *before* shifting: an unshifted `uint16_t` promotes to `int`, so shifting `high` (≥ `0x8000`) left by 16 would push a bit into the sign bit of a signed `int` — undefined behaviour before C++20, and poor practice after. Doing the maths in `uint32_t` sidesteps it. Then cast to signed.
 
 ??? success "Show solution"
 
@@ -80,7 +80,7 @@ A Modbus device reports a 32-bit signed integer across **two** 16-bit registers,
     }
     ```
 
-    `0x0001` in the high word and `0x1170` in the low word reassemble to `0x00011170` = 70000. The cast of `high` to `std::uint32_t` **before** the shift is essential: shifting a 16-bit value left by 16 would otherwise lose every bit. This is the [big-endian](serialization.md), multi-register decode from the Modbus chapter — and if the device's manual said it was *word-swapped*, you would simply pass the registers in the other order. A `float` works the same way, finishing with a `std::memcpy` to a `float` instead of a cast.
+    `0x0001` in the high word and `0x1170` in the low word reassemble to `0x00011170` = 70000. The cast of `high` to `std::uint32_t` **before** the shift is what keeps this well-defined: a `std::uint16_t` promotes to `int` (a *signed* 32-bit type), so no bits are actually lost by the shift — but for a `high` of `0x8000` or more, `high << 16` reaches the sign bit of that `int`, which is undefined behaviour before C++20 (and, though defined modulo 2³² since, still poor practice). Computing in `std::uint32_t` avoids the trap entirely. This is the [big-endian](serialization.md), multi-register decode from the Modbus chapter — and if the device's manual said it was *word-swapped*, you would simply pass the registers in the other order. A `float` works the same way, finishing with a `std::memcpy` to a `float` instead of a cast.
 
     </div>
 
@@ -160,5 +160,25 @@ You are designing the communication for a **fleet of mobile robots** and a share
     **Commands (must take effect).** This is *request/response* and **must arrive** — exactly the opposite priority. Options: an **RPC** call (gRPC) like `Stop()` that returns a confirmation, or an MQTT command topic at **QoS 1/2** with an acknowledgement. Either way you need **reliability and an ack**, so the operator knows the robot got it — never fire-and-forget UDP for a safety-relevant command.
 
     **The shape of the reasoning** matters more than the exact picks: telemetry is many-to-many, frequent, and loss-tolerant → pub/sub, low QoS, lose-and-move-on; commands are point-to-point, rare, and must-arrive → reliable transport with confirmation. Matching the tool to *whether a lost message is acceptable* is the core data-communication judgement this chapter builds.
+
+    </div>
+
+---
+
+## 5. Watch TCP coalesce (optional lab)
+
+*Practises: [Sockets, TCP & UDP](sockets.md), [Networking in C++](networking.md)*
+
+Exercise 3 *simulated* TCP coalescing by hand. This one makes it real. Build the [SimpleSocket](https://github.com/markaren/SimpleSocket) echo **server and client** from [Networking in C++](networking.md) in CLion (add SimpleSocket via [vcpkg](../Chapter5/dependencies.md), or clone it — it has no dependencies). Run the server, then run the client but have it send **two short messages back-to-back** without waiting for a reply between them — e.g. `write("ping")` immediately followed by `write("pong")`. On the server, do a **single** `read` into your buffer and print how many bytes arrived and what they say. Then look at what you got.
+
+> Hint: send with no delay between the two `write`s, and make the server's buffer large enough (say 1024 bytes) to hold both. Print the byte count and the string. Run it a few times.
+
+??? success "Show expected result and why"
+
+    <div class="spoiler" markdown title="Click to reveal">
+
+    You will often see the server's single `read` return **all eight bytes at once** — `pingpong` — rather than two separate reads of four bytes each. The two `write`s were coalesced into one delivery: TCP is a **byte stream**, not a message queue, so `write` boundaries are not preserved on the wire. (You may not see it every single run — timing, [Nagle's algorithm](sockets.md), and the loopback path all play a part — but sending the two writes with no gap makes coalescing likely, and it *will* happen in the field.)
+
+    This is exactly the hazard exercise 3 simulated, now lived: had the server assumed "one `read` = one message" it would have parsed `pingpong` as a single garbled command. The fix is the same [framing](serialization.md) you wrote there — delimit each message (a `'\n'`) or length-prefix it, and re-assemble on the reading side. Seeing it happen once is worth more than reading about it ten times: **TCP guarantees the bytes and their order, never where one message ends and the next begins.**
 
     </div>

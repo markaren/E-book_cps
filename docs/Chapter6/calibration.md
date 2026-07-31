@@ -43,6 +43,9 @@ The pinhole model projects a 3D point onto a 2D pixel through the camera matrix 
 
 For deep-learning [object detection](deep_vision.md) on a normal lens, you often do not calibrate — the network tolerates mild distortion. But for measuring how far away a detected object is, or stitching multiple views, calibration is the foundation.
 
+!!! note "The simulator gives you calibration for free"
+    A camera in the [3D simulator](virtual_environments.md) is a *perfect pinhole* with **known** intrinsics and **zero** distortion — there is nothing to recover, so this year's simulated project does not need a calibration step. Calibration starts to matter the moment a **real webcam** enters the picture: a physical lens has genuine distortion and unknown focal length, and only then must you run the procedure below to measure them.
+
 ---
 
 ## The calibration procedure
@@ -62,6 +65,7 @@ OpenCV provides this end to end (needs OpenCV linked, so not runnable here):
 
 // objectPoints: the checkerboard's 3D corner coordinates, one set per view
 // imagePoints:  the detected 2D corners in each image (from cv::findChessboardCorners)
+// imageSize:    the pixel dimensions of the images, e.g. cv::Size(image.cols, image.rows)
 
 cv::Mat K, distCoeffs;                       // outputs: camera matrix + distortion
 std::vector<cv::Mat> rvecs, tvecs;           // per-view extrinsics (rotation, translation)
@@ -75,7 +79,7 @@ cv::Mat undistorted;
 cv::undistort(image, undistorted, K, distCoeffs);
 ```
 
-`cv::findChessboardCorners` detects the corners for step 2; `cv::calibrateCamera` does steps 3; `cv::undistort` does step 4.
+`cv::findChessboardCorners` detects the corners for step 2; `cv::calibrateCamera` does step 3; `cv::undistort` does step 4.
 
 !!! tip "Check the reprojection error"
     `cv::calibrateCamera` returns the **RMS reprojection error** — how far, on average, the model's predicted corner positions fall from the detected ones, in pixels. A good calibration is well under one pixel. A large error means bad input: too few views, all from similar angles, a blurry or partially-hidden board. Capture 15–20 views covering different angles, distances, and image regions.

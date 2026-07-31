@@ -24,7 +24,7 @@ Here is the danger specific to this course. **AI confidently produces plausible-
 This happens because an AI model pattern-matches against code it has seen; it does not *reason about the timing* of your specific threads, and it cannot *feel* a race the way running the code under load would reveal. A concurrency bug does not show up in a quick read or a single execution — the very properties that make these bugs [hard to debug](debugging_concurrency.md) also make them hard for an AI (or a human skimming) to catch. The plausibility of the output is the trap: it *looks* right.
 
 !!! danger "Treat AI-generated concurrent code as unverified"
-    Any threaded code an assistant gives you should be reviewed as if a stranger wrote it and run under [**ThreadSanitizer**](debugging_concurrency.md) before you trust it. "It compiled and printed the right number" is not evidence that concurrent code is correct — it is the *default* appearance of a race that has not bitten yet.
+    Any threaded code an assistant gives you should be reviewed as if a stranger wrote it and run under [**ThreadSanitizer**](debugging_concurrency.md) before you trust it (on Windows that means a [WSL2 toolchain](debugging_concurrency.md) — TSan does not run natively there). "It compiled and printed the right number" is not evidence that concurrent code is correct — it is the *default* appearance of a race that has not bitten yet.
 
 ---
 
@@ -40,7 +40,7 @@ The entire point of AIS2203 is for **you** to understand threads, synchronizatio
 
 - **Ask it to explain, not just produce.** "Why is this correct? What could race here? What happens if two threads call this at once?" turns the tool from a code vending machine into a tutor.
 - **Verify against authoritative sources.** AI hallucinates plausible-but-wrong API signatures and behaviour; check [cppreference](https://en.cppreference.com/) for anything you are unsure of.
-- **Test it — and for threads, run TSan.** Logic gets a [test](Chapter6/cmake.md); concurrent code gets [ThreadSanitizer](debugging_concurrency.md). Do not promote AI code to "working" on the strength of one run.
+- **Test it — and for threads, run TSan.** Logic gets a [test](Chapter5/cmake.md); concurrent code gets [ThreadSanitizer](debugging_concurrency.md). Do not promote AI code to "working" on the strength of one run.
 - **Read every line before you use it.** If you cannot explain a line to a classmate, do not put it in your project.
 - **Be honest about its use.** Follow the course's policy on AI assistance; the goal is your learning, and being straight about what you wrote versus generated is part of that.
 

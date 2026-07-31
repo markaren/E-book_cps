@@ -20,23 +20,55 @@ Three libraries cover almost everything you will need:
 
 ## SimpleSocket: the small option
 
-For most course work you do not need an industrial async framework — you need a TCP connection that works the same on Windows and the Pi without ceremony. [SimpleSocket](https://github.com/markaren/SimpleSocket) is a thin cross-platform wrapper around Win/Unix sockets with no third-party dependencies. The same code in [Sockets](sockets.md) shrinks to roughly this shape:
+For most course work you do not need an industrial async framework — you need a TCP connection that works the same on Windows and the Pi without ceremony. [SimpleSocket](https://github.com/markaren/SimpleSocket) is a thin cross-platform wrapper around Win/Unix sockets with no third-party dependencies. The whole [raw echo pair from Sockets](sockets.md) — which only ran on Linux/WSL2 — becomes this, and it **builds and runs in CLion on Windows out of the box**:
+
+**Server:**
 
 <!-- no-ce -->
 ```cpp
-// Client — connect, send, receive, all cross-platform and RAII-managed
-TCPClientContext ctx;
-auto connection = ctx.connect("127.0.0.1", 8080);
+#include <simple_socket/TCPSocket.hpp>
+#include <iostream>
+#include <string>
 
-connection->write("hello");
+using namespace simple_socket;
 
-std::vector<unsigned char> buffer(1024);
-auto n = connection->read(buffer);
-// ... use the first n bytes ...
-// connection closes itself when it goes out of scope (RAII)
+int main() {
+    TCPServer server(8080);                       // claim port 8080 and listen
+    std::cout << "listening on port 8080...\n";
+
+    auto conn = server.accept();                  // block until a client connects
+
+    std::string buffer(1024, '\0');
+    int n = conn->read(buffer);                   // read whatever arrived
+    conn->write(std::vector<unsigned char>(buffer.begin(), buffer.begin() + n));  // echo it back
+    // conn and server close themselves via RAII
+}
 ```
 
-No `WSAStartup`, no `reinterpret_cast`, no manual `close`, and identical source on every platform. It also bundles a [Modbus TCP](modbus.md) client, which is why the next chapters lean on it. For a robot streaming telemetry to a laptop, this is usually all you need.
+**Client:**
+
+<!-- no-ce -->
+```cpp
+#include <simple_socket/TCPSocket.hpp>
+#include <iostream>
+#include <string>
+
+using namespace simple_socket;
+
+int main() {
+    TCPClientContext ctx;
+    auto conn = ctx.connect("127.0.0.1", 8080);   // reach out to the server
+
+    conn->write("hello");
+
+    std::string buffer(1024, '\0');
+    int n = conn->read(buffer);
+    std::cout << "server replied: " << buffer.substr(0, n) << "\n";  // server replied: hello
+    // conn closes itself when it goes out of scope (RAII)
+}
+```
+
+Run the server in one CLion configuration, the client in another, and the client prints `server replied: hello`. Compare with the [raw version](sockets.md): no `WSAStartup`, no `reinterpret_cast`, no `SOCKET`-vs-`int`, no manual `close` — and *identical* source on Windows, Linux, and the Pi. `read` returns the byte count (a `read` may return fewer bytes than a full message — the [framing](serialization.md) problem again; `readExact` loops until a known number of bytes arrive). SimpleSocket also bundles a [Modbus TCP](modbus.md) client and an optional [MQTT](mqtt_rpc.md) client, which is why the next chapters lean on it. For a robot streaming telemetry to a laptop, this is usually all you need.
 
 ---
 
@@ -66,15 +98,32 @@ Historically you expressed the "what to do next" as a **callback** (a handler fu
 
 <!-- no-ce -->
 ```cpp
+using boost::asio::awaitable;
+using boost::asio::co_spawn;
+using boost::asio::detached;
+using boost::asio::ip::tcp;
+namespace this_coro = boost::asio::this_coro;
+
 // Asio coroutine: suspends (without blocking the thread) at each co_await
 awaitable<void> echo(tcp::socket socket) {
     char data[1024];
-    for (;;) {
-        std::size_t n = co_await socket.async_read_some(buffer(data));
-        co_await async_write(socket, buffer(data, n));
+    for (;;) {                                    // loops until the peer disconnects
+        std::size_t n = co_await socket.async_read_some(boost::asio::buffer(data));
+        co_await async_write(socket, boost::asio::buffer(data, n));
     }
 }
+
+int main() {
+    boost::asio::io_context io;
+    tcp::acceptor acceptor(io, {tcp::v4(), 8080});
+    tcp::socket socket = acceptor.accept();       // (blocking accept, for brevity)
+
+    co_spawn(io, echo(std::move(socket)), detached);  // schedule the coroutine
+    io.run();                                     // drive the event loop until work is done
+}
 ```
+
+Two things to note. The **token-less** `co_await socket.async_read_some(...)` form — no explicit completion token — needs **Boost ≥ 1.86**; on older Boost you pass `boost::asio::use_awaitable` as a final argument to each async call instead. And the `io_context` is what actually *runs* the coroutine: `co_spawn` schedules it and `io.run()` drives the event loop, so nothing happens until you call `run()`. If the peer drops mid-conversation, `async_read_some` fails and **throws out of the coroutine** — you would wrap the body in `try`/`catch` (or spawn with an error-aware completion handler) to clean up that one connection without taking down the server.
 
 This is the payoff promised in the [Coroutines](../Chapter3/coroutines.md) chapter: one or a few threads can drive thousands of connections, each a suspended coroutine costing almost nothing while it waits — the scalable structure for a busy server, with readable code.
 
@@ -99,7 +148,7 @@ If the task is "fetch this URL" or "POST to this web API", you do not want raw s
 | Industrial device speaking Modbus | [Modbus](modbus.md) library (SimpleSocket has one) |
 | Publish/subscribe or remote calls | [MQTT / RPC](mqtt_rpc.md) library |
 
-Whatever you pick, install it through [vcpkg](../Chapter6/dependencies.md) rather than by hand — `vcpkg install boost-asio` / `curl` — so the dependency is reproducible.
+Whatever you pick, install it through vcpkg rather than by hand — `vcpkg add port boost-asio` / `curl` in your project's manifest — so the dependency is reproducible. (vcpkg and its manifest workflow are what [Part 5 shows how to set up](../Chapter5/dependencies.md).)
 
 ---
 
@@ -109,4 +158,4 @@ Whatever you pick, install it through [vcpkg](../Chapter6/dependencies.md) rathe
 - **SimpleSocket** is a dependency-free wrapper good for straightforward course client/server work (and it includes [Modbus TCP](modbus.md)); **Boost.Asio** is the serious, full-featured choice; **libcurl** is for HTTP clients.
 - The core decision is **blocking vs asynchronous** I/O: blocking is simple but needs **one thread per connection**; asynchronous (Asio's `io_context`) lets **one thread serve many** connections. Modern Asio uses C++20 [coroutines](../Chapter3/coroutines.md) so async code reads like blocking code.
 - Use blocking I/O at small scale; reach for async only when connection count or [latency](../Chapter3/real_time.md) demands it.
-- Install networking libraries via [vcpkg](../Chapter6/dependencies.md). Next: [Serial Communication](serial.md), for the wire to a microcontroller.
+- Install networking libraries via [vcpkg](../Chapter5/dependencies.md). Next: [Serial Communication](serial.md), for the wire to a microcontroller.
