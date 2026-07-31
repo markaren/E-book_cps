@@ -2,7 +2,7 @@
 
 [Processes & Threads](../Chapter2/processes_threads.md) warned that threads are not free: each one costs memory and time to create. So spawning a fresh `std::thread` for every small task does not scale — if you have ten thousand short jobs, you pay the creation cost ten thousand times, and you may try to run more threads at once than the machine can handle. A **thread pool** solves this by creating a fixed set of worker threads *once* and feeding them a stream of tasks.
 
-This chapter assembles a working pool from the two tools you already have: the producer/consumer queue from [Condition Variables](../Chapter2/condition_variables.md), and the [`std::packaged_task`](futures.md) that turns a unit of work into a future.
+This chapter assembles a working pool from two ideas you already have: the producer/consumer recipe from [Condition Variables](../Chapter2/condition_variables.md) — written out inline below so every moving part is visible, though you could equally compose the pool from your `ThreadSafeQueue<T>` — and the [`std::packaged_task`](futures.md) that turns a unit of work into a future.
 
 ---
 

@@ -23,6 +23,9 @@ target_link_libraries(vision PRIVATE ${OpenCV_LIBS})
 !!! warning "OpenCV builds from source — start it early"
     On Windows, vcpkg **compiles OpenCV from source**, which takes **30–60+ minutes and several GB** of disk the first time (it pulls in many transitive dependencies). Trigger the build **before** the lab, not during it — the first `cmake` configure after adding `opencv` is when it happens. If you do not need the full library, request a **trimmed feature set** (e.g. `opencv[core,imgproc,imgcodecs]` in the manifest) to cut the build down substantially.
 
+!!! note "One exception: inside a ROS2 workspace, conda owns OpenCV"
+    The vcpkg advice above holds for a standalone vision project. Once your code lives in the [ROS2 workspace](../Chapter7/ros2_windows.md) (Part 7), the RoboStack **conda environment already ships OpenCV**, and pulling a second copy via vcpkg puts two differently-built OpenCV DLLs in play — the crash-and-conflict trap that chapter warns about. **One owner per library:** in the ROS2 workspace, let conda supply OpenCV and drop it from `vcpkg.json` there.
+
 ---
 
 ## An image is a matrix

@@ -4,7 +4,7 @@ Work through these after reading Chapter 4. **Try each one yourself before revea
 
 When you open a solution it appears **blurred** — click it once more to reveal it.
 
-The first three are runnable programs; the last is a **design** exercise — think it through and write down your reasoning before revealing the discussion.
+Exercises 1–3 are runnable programs; exercise 4 is a **design** exercise — think it through and write down your reasoning before revealing the discussion — and exercise 5 is an optional lab that makes exercise 3's simulation real on an actual socket.
 
 ---
 

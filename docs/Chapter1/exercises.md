@@ -227,7 +227,7 @@ Write a `Button` class that lets callers register click handlers and then "fires
 
 Write a `Node` struct with a name and a `std::shared_ptr<Node>` to another node, printing in its constructor and destructor. In `main`, create two nodes and point each one's link at the *other*, then let them go out of scope. Run it and notice the destructors **never print** — the two nodes keep each other alive. Then fix the leak by making one of the two links a `std::weak_ptr` and confirm both destructors fire.
 
-> Hint: two `shared_ptr`s pointing at each other form a **cycle** — each holds the other's reference count above zero, so neither ever reaches zero. Break it by making the "back" link a `weak_ptr`, which observes without owning. This is the exact shape of a scene-graph parent link: a parent owns its children with `shared_ptr`, and each child points *back* at its parent with a `weak_ptr` — the pattern you will meet in the [Threepp](https://github.com/markaren/threepp) simulator.
+> Hint: two `shared_ptr`s pointing at each other form a **cycle** — each holds the other's reference count above zero, so neither ever reaches zero. Break it by making the "back" link a `weak_ptr`, which observes without owning. This is the classic shape of a scene-graph parent link: a parent owns its children with `shared_ptr`, and each child needs a non-owning way to point *back* at its parent. `weak_ptr` is the safe general answer; [threepp](https://github.com/markaren/threepp) itself takes the other option — a raw non-owning pointer — because a parent always outlives its children there (see [Smart Pointers](smart_pointers.md)).
 
 ??? success "Show solution"
 
@@ -309,6 +309,6 @@ Write a `Node` struct with a name and a `std::shared_ptr<Node>` to another node,
     scope exited
     ```
 
-    Both destructors now run. The `weak_ptr` back-link lets the child *reach* its parent — via `.lock()`, which hands back a `shared_ptr` only while the parent is still alive — without keeping it alive. This is the standard shape of a [scene graph](smart_pointers.md): own **downward** with `shared_ptr`, refer **upward** with `weak_ptr`. Threepp's `Object3D` is built exactly this way.
+    Both destructors now run. The `weak_ptr` back-link lets the child *reach* its parent — via `.lock()`, which hands back a `shared_ptr` only while the parent is still alive — without keeping it alive. This is the standard shape of a [scene graph](smart_pointers.md): own **downward** with `shared_ptr`, refer **upward** with something non-owning. `weak_ptr` is the right upward link when the parent's lifetime is *not* guaranteed to cover the child's. threepp's `Object3D` makes the opposite call — its parent link is a plain raw pointer, valid because a parent always outlives its children in the scene graph ([Smart Pointers](smart_pointers.md) walks through that reasoning). Same problem, two legitimate answers; what is never legitimate is a second *owning* link, which is the cycle you just fixed.
 
     </div>

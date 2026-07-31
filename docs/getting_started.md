@@ -24,7 +24,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 ```
 
-Use a recent compiler. **GCC 11+**, **MSVC 19.30+ (Visual Studio 2022 17.0+)**, or **Clang 14+** all have the C++20 thread features this book uses. Older compilers will fail to find `<jthread>` and the C++20 synchronisation types.
+Use a recent compiler. **GCC 11+**, **MSVC 19.30+ (Visual Studio 2022 17.0+)**, or **Clang 14+** all have the C++20 thread features this book uses. Older compilers will fail to find `std::jthread` (which lives in `<thread>`) and the C++20 synchronisation types.
 
 !!! warning "Clang and the standard library it uses"
     Clang 14+ has `std::jthread` and `std::stop_token` **only when paired with a recent GNU standard library (libstdc++)** — the usual setup on Linux and in MinGW. If Clang uses LLVM's own **libc++** (the default on macOS, via Apple Clang), those types arrived only in **libc++ 17**. On a Mac, prefer a recent Homebrew LLVM or GCC over the system Apple Clang for this book's threading code.
@@ -53,7 +53,7 @@ target_link_libraries(app PRIVATE Threads::Threads)
 
 ## A Linux environment
 
-This year the project runs in a 3D simulator on your desktop, so you do **not** need a Raspberry Pi. A Linux environment is still handy, though — several communication examples are Unix-flavoured, and it makes the [Embedded Linux](embedded_linux.md) background concrete. Three options, in rough order of convenience:
+This year the project runs in a 3D simulator on your desktop, so you do **not** need a Raspberry Pi. A Linux environment matters for one concrete reason, though: **ThreadSanitizer**, the data-race detector this book leans on throughout ([Debugging Concurrent Programs](debugging_concurrency.md)), does not run under MSVC or MinGW — on a Windows laptop you need WSL2 to use it. Several communication examples are also Unix-flavoured, and Linux makes the [Embedded Linux](embedded_linux.md) background concrete. Three options, in rough order of convenience:
 
 | Option | Good for | Notes |
 |--------|----------|-------|
@@ -61,7 +61,7 @@ This year the project runs in a 3D simulator on your desktop, so you do **not** 
 | **A Raspberry Pi** | Optional real hardware | Not needed this year; only if you want to try the [Embedded Linux](embedded_linux.md) material for real. |
 | **A Linux VM or dual boot** | A full desktop Linux | Heaviest to set up; rarely necessary for this course. |
 
-You do not need all three — and you may need none. WSL2 is more than enough to follow every chapter, and on Windows you can build and run the course work directly; pick a Linux option only if you want a Unix shell handy.
+You do not need all three. On Windows, **set up WSL2** — it takes minutes, it is more than enough to follow every chapter, and when Part 2's exercises ask you to confirm a fix with ThreadSanitizer it is the only way to run it. The other two options are strictly optional.
 
 !!! tip "CLion talks to all of these"
     CLion can build and debug on a remote machine over SSH — WSL2 or a Pi — through **Settings → Build, Execution, Deployment → Toolchains**, so you edit on your laptop while the compiler runs on Linux. The [Embedded Linux](embedded_linux.md) reference sketches the rest (cross-compiling, deploying as a service) for when real hardware is in play.
@@ -70,7 +70,7 @@ You do not need all three — and you may need none. WSL2 is more than enough to
 
 ## Third-party libraries
 
-C++ has no networking in its standard library (see [Networking in C++](Chapter4/networking.md)), so Part 4 uses external libraries such as **Boost.Asio**. This course manages dependencies with **vcpkg**, covered in [Dependencies with vcpkg](Chapter5/dependencies.md). AIS1003 fetched its one or two libraries with CMake's `FetchContent`; this course adds vcpkg because the later chapters pull in several larger libraries (Boost, OpenCV) that are slow to build from source, and vcpkg supplies prebuilt binaries — both tools stay valid, and [Part 5](Chapter5/dependencies.md) explains which one owns what. You do not need it yet — install it when a chapter first asks for a library.
+C++ has no networking in its standard library (see [Networking in C++](Chapter4/networking.md)), so Part 4 uses external libraries such as **Boost.Asio**. This course manages dependencies with **vcpkg**, covered in [Dependencies with vcpkg](Chapter5/dependencies.md). AIS1003 fetched its one or two libraries with CMake's `FetchContent`; this course adds vcpkg because the later chapters pull in several larger libraries (Boost, OpenCV) with deep dependency trees of their own, and vcpkg resolves, builds, and caches all of that for your exact toolchain instead of leaving it to hand-written CMake. Note that vcpkg **builds libraries from source** — the first OpenCV configure takes a long while, which is why [that chapter](Chapter6/opencv.md) says to start it before the lab. Both tools stay valid, and [Part 5](Chapter5/dependencies.md) explains which one owns what. You do not need it yet — install it when a chapter first asks for a library.
 
 ---
 

@@ -150,7 +150,7 @@ Write a loop that runs five cycles at a fixed **50 ms** period using `sleep_unti
 
 *Practises: [Parallel Algorithms](parallel_algorithms.md)*
 
-Sum a large vector with `std::reduce` and the `std::execution::par` policy. Fill it with `1`s so the answer is its size. (On GCC/Clang you must link Intel TBB — see below — or the policy does nothing.)
+Sum a large vector with `std::reduce` and the `std::execution::par` policy. Fill it with `1`s so the answer is its size. (On GCC/Clang you must link Intel TBB — see below — or `<execution>` fails to compile.)
 
 > Hint: `std::reduce(std::execution::par, begin, end, init)` from `<numeric>` and `<execution>`. Use `std::reduce`, **not** `std::accumulate` — only `reduce` parallelises, because it may combine elements in any order.
 

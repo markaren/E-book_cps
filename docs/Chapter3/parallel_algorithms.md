@@ -127,7 +127,7 @@ Parallel algorithms are the **first** thing to reach for when the work is "the s
 ## Summary
 
 - C++17 adds **execution policies** to the standard algorithms: pass `std::execution::par` as the first argument and the algorithm runs across cores, with the library managing the threads.
-- `seq` (sequential), `par` (parallel), `par_unseq` (parallel + vectorised). `par` is the everyday choice; `par_unseq` is faster but forbids locks/allocation in the callable.
+- `seq` (sequential), `par` (parallel), `par_unseq` (parallel + vectorised). `par` is the everyday choice; `par_unseq` is faster but forbids locks in the callable (memory allocation is explicitly exempt).
 - Use **`std::reduce`** / `std::transform_reduce` for parallel sums, not the strictly-sequential `std::accumulate`; the operation must be **associative and commutative**, and floating-point sums may differ slightly run to run.
 - Under a parallel policy **you** must avoid data races in the callable, and an escaping **exception calls `std::terminate`**.
 - On **GCC you must install and link Intel TBB** (`TBB::tbb`) or `<execution>` fails to compile; MSVC works out of the box (and treats `par_unseq` as `par`). In **CLion on Windows the default MinGW toolchain hits this** — switch to the Visual Studio toolchain to avoid TBB. Parallelism has overhead — **measure** on realistic data.

@@ -89,6 +89,9 @@ The rule of thumb:
 !!! warning "TCP is a stream, not a message queue"
     A common beginner bug: TCP does **not** preserve your `send()` boundaries. Two `send()`s of 10 bytes may arrive as one `recv()` of 20, or as 5 + 15. TCP guarantees the *bytes* and their *order*, not where one message ends and the next begins. You must impose your own framing — a length prefix, or a delimiter like `\n`. This is one reason a [serialization](serialization.md) format matters. UDP, by contrast, preserves datagram boundaries: one `send()` is one `recv()`.
 
+!!! note "Nagle's algorithm: TCP batches small writes"
+    One mechanism behind that coalescing has a name: **Nagle's algorithm**. To avoid flooding the network with tiny packets, TCP may *hold back* a small `send()` until the previous packet is acknowledged, merging your small writes into fewer, larger packets. Great for throughput; bad for a control loop, where it can add tens of milliseconds of latency to a 20-byte command. The switch that turns it off is the `TCP_NODELAY` socket option — "send my small writes now." Rule of thumb: enable `TCP_NODELAY` for small, latency-critical messages (commands, setpoints); leave Nagle on for bulk transfers.
+
 ---
 
 ## A minimal TCP server and client

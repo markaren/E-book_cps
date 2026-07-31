@@ -75,7 +75,7 @@ int main() {
 }
 ```
 
-Install it via vcpkg (`vcpkg install nlohmann-json`) — the package manager [Part 5 shows how to set up](../Chapter5/dependencies.md). For binary, protobuf and FlatBuffers each provide a compiler that generates C++ (and Python, Java, …) types from a schema file — the same code-generation idea you will see with [gRPC](mqtt_rpc.md).
+Install it via vcpkg — add `nlohmann-json` to your project's `vcpkg.json` with `vcpkg add port nlohmann-json`, the manifest workflow [Part 5 shows how to set up](../Chapter5/dependencies.md). For binary, protobuf and FlatBuffers each provide a compiler that generates C++ (and Python, Java, …) types from a schema file — the same code-generation idea you will see with [gRPC](mqtt_rpc.md).
 
 To see the round-trip without any dependency, here is a hand-written text serializer — exactly the kind of thing a real format does for you, shown so the concept is concrete:
 

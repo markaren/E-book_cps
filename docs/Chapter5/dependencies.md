@@ -120,7 +120,7 @@ For one or two dependencies, [`FetchContent`](cmake.md) is often enough and need
 
     - **FetchContent owns [threepp](../Chapter6/virtual_environments.md)** — the course's 3D-simulator library is consumed this way. It is the canonical worked example: declare it with `FetchContent_Declare`/`FetchContent_MakeAvailable` and it is fetched at configure time and built with your project, no package manager needed.
     - **vcpkg owns the course libraries** — OpenCV, Boost.Asio, nlohmann/json, TBB, Catch2 — declared in `vcpkg.json`.
-    - **conda / RoboStack will own ROS2** later in the course, when the [ROS2 workspace](../Chapter6/virtual_environments.md) enters.
+    - **conda / RoboStack will own ROS2** later in the course, when the [ROS2 workspace](../Chapter7/ros2_workspace.md) enters.
 
     The one iron rule: **never let two channels provide the same library.** The classic failure is a conda environment putting its DLLs on `PATH` while vcpkg has built its own copy of the same library — at run time Windows loads whichever it finds first, and versions collide. Keeping the channels disjoint avoids this. Mechanically they even hook CMake differently: **vcpkg** owns `CMAKE_TOOLCHAIN_FILE`, while **conda** is found via `CMAKE_PREFIX_PATH` — so the two can coexist in one configure as long as no library is claimed by both.
 

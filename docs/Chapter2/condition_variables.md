@@ -254,7 +254,7 @@ commands.push(readCommand());
 commands.close();   // no more commands; worker finishes what is queued, then stops
 ```
 
-This is the backbone of the [thread pool](../Chapter3/thread_pools.md) in Part 3, and of the comms-to-control hand-off in the project: the communications thread `push`es incoming commands, the control thread `waitAndPop`s them, and shutdown is one `close()` call.
+This is the recipe behind the [thread pool](../Chapter3/thread_pools.md) in Part 3 — the pool inlines the same mutex + condition variable + queue so you can watch every moving part, rather than reusing this class — and it is the comms-to-control hand-off in the project: the communications thread `push`es incoming commands, the control thread `waitAndPop`s them, and shutdown is one `close()` call.
 
 ### A latest-value mailbox
 

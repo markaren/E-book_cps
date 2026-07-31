@@ -61,7 +61,7 @@ A quick reference for the vocabulary used throughout this book. Each term links 
 | Term | Meaning |
 |------|---------|
 | **Serialization** | Converting an object to a portable byte sequence (and back). ([Serialization](Chapter4/serialization.md)) |
-| **Endianness** | The byte order of multi-byte numbers; the wire uses big-endian. ([Serialization](Chapter4/serialization.md)) |
+| **Endianness** | The byte order of multi-byte numbers; each protocol or format defines its own (network headers and Modbus are big-endian; protobuf and FlatBuffers little-endian). ([Serialization](Chapter4/serialization.md), [Portability](portability.md)) |
 | **Socket** | An endpoint of a network link, addressed by IP + port. ([Sockets, TCP & UDP](Chapter4/sockets.md)) |
 | **TCP / UDP** | Reliable ordered stream vs unreliable connectionless datagrams. ([Sockets, TCP & UDP](Chapter4/sockets.md)) |
 | **Framing** | Marking message boundaries in a byte stream (length prefix or delimiter). ([Sockets, TCP & UDP](Chapter4/sockets.md)) |
@@ -82,6 +82,7 @@ A quick reference for the vocabulary used throughout this book. Each term links 
 | **FetchContent** | A built-in CMake module that downloads a dependency's source at configure time and compiles it as part of your build — no separate package manager. ([CMake](Chapter5/cmake.md)) |
 | **`extern "C"`** | Gives a C++ function C linkage (no name mangling) so other languages can call it. ([Calling C++ from Python](Chapter5/python_interop.md)) |
 | **Cross-compiling** | Building on one architecture (host) a binary for another (target). ([Embedded Linux](embedded_linux.md)) |
+| **ABI** | Application binary interface — the compiled-code contract (object layout, name mangling, calling conventions) that decides whether separately built binaries can link and run together. ([Portability](portability.md)) |
 | **ThreadSanitizer (TSan)** | A runtime tool that detects data races. ([Debugging Concurrent Programs](debugging_concurrency.md)) |
 | **Undefined behaviour (UB)** | Code with no defined meaning; may "work" then break — not portable. ([Portability](portability.md)) |
 

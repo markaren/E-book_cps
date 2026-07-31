@@ -48,6 +48,10 @@ Use **[vcpkg](Chapter5/dependencies.md)**: declare it in `vcpkg.json`, configure
 
 Your program runs from its **working directory**, which in CLion is the *build* folder (e.g. `cmake-build-debug/`), not your project folder. That is where output files appear and where input files are looked for — put them there or set the working directory under **Run → Edit Configurations**.
 
+### How is the semester project assessed?
+
+At an **oral exam**: you present the system you built — the simulator, the concurrency architecture, the communication, the ROS2 integration — and answer questions about *why* it is built the way it is. [Presenting Your Project](presenting.md) is the checklist for being ready; read it well before exam week, not the night before. For dates and formalities, see the course page on Blackboard/NTNU's course description.
+
 ### Do I need a Raspberry Pi or other hardware?
 
 **No.** This year the project runs in a [3D simulator](Chapter6/virtual_environments.md) on your own machine. The [Embedded Linux](embedded_linux.md) reference is background — the same C++ you write for the simulated robot would run on a real Pi, but you do not need one for the coursework.

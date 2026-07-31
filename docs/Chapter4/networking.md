@@ -148,7 +148,7 @@ If the task is "fetch this URL" or "POST to this web API", you do not want raw s
 | Industrial device speaking Modbus | [Modbus](modbus.md) library (SimpleSocket has one) |
 | Publish/subscribe or remote calls | [MQTT / RPC](mqtt_rpc.md) library |
 
-Whatever you pick, install it through vcpkg rather than by hand — `vcpkg install boost-asio` / `curl` — so the dependency is reproducible. (vcpkg is the package manager [Part 5 shows how to set up](../Chapter5/dependencies.md).)
+Whatever you pick, install it through vcpkg rather than by hand — `vcpkg add port boost-asio` / `curl` in your project's manifest — so the dependency is reproducible. (vcpkg and its manifest workflow are what [Part 5 shows how to set up](../Chapter5/dependencies.md).)
 
 ---
 

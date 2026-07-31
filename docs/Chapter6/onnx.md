@@ -79,7 +79,7 @@ Inference takes time — tens of milliseconds per frame, sometimes more on a Pi.
 #include <thread>
 // FrameQueue: a *closeable* thread-safe queue.
 //   push(cv::Mat) / close() / pop() -> std::optional<cv::Mat> (empty once closed AND drained)
-// This is the pattern exercise 3 builds; a plain waitAndPop() cannot be woken to shut down.
+// This is Part 2's ThreadSafeQueue with a vision payload; exercise 3 rebuilds it.
 
 std::atomic<bool> running{true};
 FrameQueue frames;
@@ -107,10 +107,10 @@ std::jthread inference([&] {
 This is the [producer/consumer](../Chapter2/condition_variables.md) pattern with a vision payload: the camera thread never blocks on inference, and the detections flow out to the [controller](../Chapter3/real_time.md) or across a [socket](../Chapter4/sockets.md) to an operator. It composes the whole book — a [generic queue](../Chapter1/templates.md), [`jthread`](../Chapter2/threads.md), [atomics](../Chapter2/atomics.md) for the stop flag, and the [serialization](../Chapter4/serialization.md) of results.
 
 !!! note "Why the queue must be *closeable*"
-    A blocking `waitAndPop()` sleeps until a frame arrives — so simply setting `running = false` never wakes it, and the consumer `jthread` would hang forever at shutdown, unable to join. The fix is a queue that can be **closed**: `close()` wakes any waiting `pop()`, and `pop()` returns an empty `std::optional` once the queue is closed *and* drained, so the consumer's loop ends cleanly. That is exactly the `close()` + `std::optional` queue you build in [exercise 3](exercises.md) — use it here rather than a bare `waitAndPop()`.
+    A pop that blocks until a frame arrives — like the simplified queue previewed in [Part 1](../Chapter1/templates.md) — can never be woken by setting `running = false`, so the consumer `jthread` would hang forever at shutdown, unable to join. The fix is a queue that can be **closed**: `close()` wakes any waiting `pop()`, and `pop()` returns an empty `std::optional` once the queue is closed *and* drained, so the consumer's loop ends cleanly. That is exactly why [Part 2's `ThreadSafeQueue`](../Chapter2/condition_variables.md#a-reusable-thread-safe-queue) has `close()` and an `optional`-returning `waitAndPop()` — `FrameQueue` above *is* that class, and [exercise 3](exercises.md) rebuilds it.
 
 !!! warning "Drop frames to stay real-time"
-    If inference is slower than capture, an unbounded queue **grows without limit** and your detections fall further and further behind the live scene — the [drift](../Chapter3/real_time.md) problem, in spatial form. For a real-time system you almost always want the **latest** frame, not a backlog of stale ones: cap the queue at a small size and discard the oldest frame when it is full (or keep only a single "latest frame" slot). A fresh detection on the current frame beats a perfect detection on a frame from two seconds ago.
+    If inference is slower than capture, an unbounded queue **grows without limit** and your detections fall further and further behind the live scene — the [drift](../Chapter3/real_time.md) problem, in spatial form. For a real-time system you almost always want the **latest** frame, not a backlog of stale ones: cap the queue at a small size and discard the oldest frame when it is full — or keep only a single "latest frame" slot, which is exactly [Part 2's `Mailbox`](../Chapter2/condition_variables.md#a-latest-value-mailbox) with a `cv::Mat` in it. A fresh detection on the current frame beats a perfect detection on a frame from two seconds ago.
 
 ---
 

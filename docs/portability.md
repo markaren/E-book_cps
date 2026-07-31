@@ -8,6 +8,8 @@ Your code runs in more places than you might think: on your Windows laptop, on a
 
 The foundation, restated: a compiled binary is machine code for **one** operating system and CPU architecture — a Windows `.exe` does not run on Linux, and an x86-64 build does not run on ARM. What *is* portable is the **source code**, recompiled on each platform. [CMake](Chapter5/cmake.md) is what makes that recompilation uniform: one `CMakeLists.txt` configures and builds the same project on Windows, Linux, and macOS.
 
+Even on *one* platform, binaries only interoperate if they agree on the **ABI** (application binary interface) — the compiled-code contract covering object layout, name mangling, and calling conventions. Different compilers have different C++ ABIs, which is why you cannot link MinGW-built objects against MSVC-built libraries on the same Windows machine: every C++ library in one program must come from a compatible compiler. (This is also the payoff behind a *stable* ABI, the property the [pimpl idiom](pimpl.md) can preserve for a library's public boundary.)
+
 But "compiles on my machine" is not the same as "portable." Three things conspire against you, and the rest of this page is how to handle each.
 
 ---
