@@ -41,7 +41,7 @@ private:
         const auto frame = frames_.latest();    // newest frame, or nullopt before the first
         if (!frame) return;
         sensor_msgs::msg::CompressedImage msg;
-        msg.header.stamp = now();
+        msg.header.stamp = now();               // publish time — close enough at 20 Hz; see the stamp note below
         msg.header.frame_id = "camera_link";
         msg.format = "jpeg";
         cv::imencode(".jpg", *frame, msg.data,  // encode straight into the message
@@ -120,7 +120,7 @@ for (const auto& box : boxes) {           // your detector's output
 detectionsPub_->publish(msg);
 ```
 
-Note the **stamp**: it is the *image's* timestamp, not `now()`. A detection describes the world as it was when the frame was captured, and inference took tens of milliseconds since. Copy the `header` from the `CompressedImage` the detector consumed, and every subscriber can pair boxes with the frames they belong to.
+Note the **stamp**: it is the *image's* timestamp, not `now()`. A detection describes the world as it was when the frame was captured, and inference took tens of milliseconds since. Copy the `header` from the `CompressedImage` the detector consumed, and every subscriber can pair boxes with the frames they belong to. (The camera publisher above stamps at *publish* time — within one frame of the truth at 20 Hz, fine to start with. The clean upgrade is a mailbox that carries the frame *together with its capture timestamp*, set on the render thread — worth doing once detections feed planning.)
 
 Detections are small and low-rate, so QoS matters less here — the default (reliable, keep-last 10) is fine; the freshness argument bites on the megabyte-scale image stream, not on a handful of boxes. And reusing the standard type instead of inventing your own is the [`.msg` reuse rule](ros2_concepts.md) paying out: `rqt`, `ros2 bag`, and anyone else's node already understand a `Detection2DArray`.
 

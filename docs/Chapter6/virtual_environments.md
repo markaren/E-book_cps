@@ -147,6 +147,7 @@ car->add(sensorCam);                         // a child of the car: moves with i
 auto target = GLRenderTarget::create(sensorW, sensorH);     // offscreen framebuffer
 std::vector<unsigned char> pixels(sensorW * sensorH * 3);   // RGB readback buffer
 Mailbox<cv::Mat> cameraFrames;               // the Part 2 mailbox: newest frame wins
+double cameraAccumulator = 0.0;              // the camera's own cadence counter
 ```
 
 Inside the render loop, the sensor renders at **its own rate**, not the display's — the same cadence discipline as the physics timestep above. A 20 Hz camera on a 60 Hz display renders every third frame:
@@ -154,10 +155,14 @@ Inside the render loop, the sensor renders at **its own rate**, not the display'
 <!-- no-ce -->
 ```cpp
 canvas.animate([&] {
-    const double dt = clock.getDelta();
-    // ... fixed-timestep physics as above ...
+    const double elapsed = clock.getDelta();  // read ONCE per frame — it feeds both accumulators
+    accumulator += elapsed;                   // fixed-timestep physics, exactly as above
+    while (accumulator >= dt) {
+        stepPhysics(dt);
+        accumulator -= dt;
+    }
 
-    cameraAccumulator += dt;
+    cameraAccumulator += elapsed;
     if (cameraAccumulator >= 1.0 / 20) {          // the sensor's rate: 20 Hz
         cameraAccumulator -= 1.0 / 20;
 
@@ -186,7 +191,7 @@ Two conversions are easy to forget, and both produce a *recognisably* wrong imag
     Copying or assigning a `cv::Mat` does **not** copy the pixels — it creates a second header pointing at the **same reference-counted buffer**. Handing a mat to another thread while the producer keeps writing into that buffer is a data race that compiles cleanly and usually appears to work. The code above is safe *by construction*: `cv::flip` writes into a fresh `frame` that owns its own pixels, and `std::move` transfers that ownership into the mailbox. If you ever share a mat across threads and are unsure who else holds its buffer, `clone()` it — a deep copy is cheap next to a race.
 
 !!! note "You already know this camera's intrinsics"
-    [Camera Calibration](calibration.md) exists because a *real* lens must be measured. Your simulated camera is a perfect pinhole, and its matrix falls straight out of the projection parameters: with vertical field of view `fov` and image size `W × H`, `fy = (H/2) / tan(fov/2)`, `fx = fy` (square pixels), `cx = W/2`, `cy = H/2`. That `K` is what projects a 3D point in the scene to a pixel — which is exactly how the simulator hands you **free bounding-box labels** for training: project an object's corners through `K` and you have its 2D box, no hand-labelling required.
+    [Camera Calibration](calibration.md) exists because a *real* lens must be measured. Your simulated camera is a perfect pinhole, and its matrix falls straight out of the projection parameters: with vertical field of view `fov` **in radians** (threepp's `PerspectiveCamera` takes **degrees** — convert with `fov * pi / 180` first) and image size `W × H`, `fy = (H/2) / tan(fov/2)`, `fx = fy` (square pixels), `cx = W/2`, `cy = H/2`. That `K` is what projects a 3D point in the scene to a pixel — which is exactly how the simulator hands you **free bounding-box labels** for training: project an object's corners through `K` and you have its 2D box, no hand-labelling required.
 
 From here the frame is ordinary data in a `Mailbox<cv::Mat>` — precisely the input the [vision pipeline](onnx.md#a-real-time-vision-pipeline) consumes, the payload [Part 4 compresses and streams](../Chapter4/serialization.md#streaming-images), and the image [Part 7 publishes onto the ROS2 graph](../Chapter7/camera_topics.md).
 

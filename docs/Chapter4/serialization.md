@@ -133,25 +133,30 @@ A real serialization format handles both: it defines field order and byte order 
 
 ## Streaming images
 
-Your car's [camera](../Chapter6/virtual_environments.md#the-camera-is-a-sensor-too) produces a `cv::Mat`, and a `cv::Mat` is just a value — a big one. Serializing it is the same job as serializing a `Reading`, but the size changes which tools are sane. Do the arithmetic before writing any code: a 640×480 colour frame is 640 × 480 × 3 = **921,600 bytes**, and at 30 fps that is **~28 MB/s ≈ 221 Mbit/s** of raw pixels — enough to saturate a real Wi-Fi link with one camera. Wrapping those bytes in JSON (numbers-as-text, or base64) only inflates them further; this is exactly the "size or rate forces binary" case from the [choosing rules](#text-vs-binary-formats) above.
+Your car's [camera](../Chapter6/virtual_environments.md#the-camera-is-a-sensor-too) produces a `cv::Mat`, and a `cv::Mat` is just a value — a big one. Serializing it is the same job as serializing a `Reading`, but the size changes which tools are sane. Do the arithmetic before writing any code: a 640×480 colour frame is 640 × 480 × 3 = **921,600 bytes**, and at the simulator camera's 20 Hz that is **~18 MB/s ≈ 147 Mbit/s** of raw pixels — enough to saturate a real Wi-Fi link with one camera (a 30 fps webcam is worse still, at ~221 Mbit/s). Wrapping those bytes in JSON (numbers-as-text, or base64) only inflates them further; this is exactly the "size or rate forces binary" case from the [choosing rules](#text-vs-binary-formats) above.
 
-The right tool is not a general-purpose binary format but an **image codec**: compress each frame as JPEG with `cv::imencode`, decode on the other end with `cv::imdecode`. A typical camera frame shrinks from ~900 KB to **20–50 KB** — two orders of magnitude, for visually negligible loss:
+The right tool is not a general-purpose binary format but an **image codec**: compress each frame as JPEG with `cv::imencode`, decode on the other end with `cv::imdecode`. A typical camera frame shrinks from ~900 KB to **20–50 KB** — two orders of magnitude, for visually negligible loss. (This is the book's first taste of [OpenCV](../Chapter6/opencv.md), Part 6's library — for now, read `cv::Mat` as "an image" and note that adding `opencv` to your manifest triggers a [long first build](../Chapter6/opencv.md).)
+
+The sender's side:
 
 <!-- no-ce -->
 ```cpp
 #include <opencv2/imgcodecs.hpp>
 
-// Sender: newest camera frame → JPEG bytes
-std::vector<unsigned char> jpeg;
+std::vector<unsigned char> jpeg;                                     // newest frame → JPEG bytes
 cv::imencode(".jpg", frame, jpeg, {cv::IMWRITE_JPEG_QUALITY, 80});   // ~900 KB → ~30 KB
 sendMessage(socket, jpeg);       // length prefix + bytes — the framing from above
+```
 
-// Receiver: JPEG bytes → image
+And the receiver's:
+
+<!-- no-ce -->
+```cpp
 std::vector<unsigned char> jpeg = readMessage(socket);    // reassemble one framed message
 cv::Mat frame = cv::imdecode(jpeg, cv::IMREAD_COLOR);     // back to a BGR cv::Mat
 ```
 
-The encoded frame is *bytes like any other message*. Over [TCP](sockets.md) it still needs framing, and here only the **length prefix** works — a JPEG can be any size and contain any byte, so no delimiter is safe. (`sendMessage`/`readMessage` above are that length-prefix framing, the scheme from the [exercises](exercises.md).) UDP looks tempting because its [use-cases table](sockets.md) says "live video", but one datagram tops out around 64 KB and anything past the network's MTU (~1,500 bytes) is fragmented — real UDP video splits every frame across many datagrams and reassembles them, machinery you do not want to hand-roll. For this course, **TCP + length prefix** is the simple, correct transport for frames.
+The encoded frame is *bytes like any other message*. Over [TCP](sockets.md) it still needs framing, and here only the **length prefix** works — a JPEG can be any size and contain any byte, so no delimiter is safe. (`sendMessage`/`readMessage` stand for that framing layer: the [exercises](exercises.md) build the delimiter variant for text; the length-prefix variant swaps the `'\n'` scan for reading a 4-byte size first.) UDP looks tempting because its [use-cases table](sockets.md) says "live video", but one datagram tops out around 64 KB and anything past the network's MTU (~1,500 bytes) is fragmented — real UDP video splits every frame across many datagrams and reassembles them, machinery you do not want to hand-roll. For this course, **TCP + length prefix** is the simple, correct transport for frames.
 
 One TCP consequence needs designing around: if the link is slower than the camera, TCP's reliability works *against* freshness — frames queue in socket buffers and the viewer falls further and further behind live, the ["complete-but-late" failure](sockets.md). The fix belongs on the **sender**: keep only the newest frame in a [`Mailbox`](../Chapter2/condition_variables.md#a-latest-value-mailbox), encode-and-send at whatever rate the link sustains, and let stale frames be overwritten before they ever reach the socket. Freshness is enforced by *dropping at the source*, not by the transport.
 
