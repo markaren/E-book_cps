@@ -283,6 +283,82 @@ Both calls can pass their accounts in either order and never deadlock. This is t
 
 ---
 
+## One instance, or one per thread: local `static` and `thread_local`
+
+Everything in this chapter so far protects data that threads share. C++ also has two storage keywords that change *how many instances* of a variable exist in the first place — and the second one makes the sharing problem vanish entirely.
+
+### Local `static`: one instance for the whole program
+
+A local variable marked `static` — a feature AIS1003 never needed — is not re-created on every call. There is exactly **one** instance, created the *first time* control reaches its declaration, and it lives until the program exits:
+
+```cpp
+#include <iostream>
+
+int nextId() {
+    static int lastId = 0;   // created once, on the very first call
+    return ++lastId;
+}
+
+int main() {
+    std::cout << nextId() << "\n";   // 1
+    std::cout << nextId() << "\n";   // 2
+    std::cout << nextId() << "\n";   // 3 — the value survives between calls
+}
+```
+
+Since C++11 that first-time initialization is **thread-safe**: if two threads reach the declaration at the same instant, one runs the initializer while the other waits for it to finish. That makes a local `static` the standard idiom for expensive set-up that should happen exactly once, when first needed:
+
+<!-- no-ce -->
+```cpp
+const Config& config() {
+    static Config instance = loadConfigFromDisk();   // runs exactly once, even with threads
+    return instance;
+}
+```
+
+!!! warning "Only the *initialization* is protected"
+    After that first call, a local `static` is an ordinary shared variable, and every rule in this chapter applies to it. `nextId()` above is thread-safe to *create* but not to *use*: `++lastId` from two threads is the broken counter from the top of this page wearing a disguise. One shared instance plus mutation means a mutex or an [atomic](atomics.md), as always.
+
+### `thread_local`: one instance per thread
+
+Change the keyword and the sharing disappears. A `thread_local` variable has **one instance per thread**: each thread that touches it gets its own copy, created on that thread's first use and destroyed when the thread exits. Two threads can hammer on it freely — they are touching *different objects*, so there is no data race and nothing to lock.
+
+The classic use is state that is expensive to create, mutated on every use, and never actually meant to be shared. A random-number generator is the perfect example — here simulating a noisy sensor:
+
+```cpp
+#include <iostream>
+#include <random>
+#include <thread>
+
+double readSensorSim(double trueValue) {
+    // One generator per thread, created on that thread's first call.
+    thread_local std::mt19937 gen{std::random_device{}()};
+    std::normal_distribution<double> noise{0.0, 0.1};
+    return trueValue + noise(gen);
+}
+
+int main() {
+    std::jthread t1([] { std::cout << readSensorSim(20.0) << "\n"; });
+    std::jthread t2([] { std::cout << readSensorSim(20.0) << "\n"; });
+}
+```
+
+Drawing from a `std::mt19937` *mutates* it, so one generator shared by every thread would be a data race. With a plain `static` you would need a mutex around every draw — serialising all your threads just to produce random numbers. `thread_local` sidesteps the question: each thread seeds and advances its own generator, lock-free. (At function scope `thread_local` implies `static`, so `static thread_local` means the same thing.)
+
+!!! note "`thread_local` is for *avoiding* sharing, not for communicating"
+    A write to a `thread_local` is invisible to every other thread — that is the point. If threads need to *exchange* data, you are back to the tools of this chapter, or the [thread-safe queue](condition_variables.md#a-reusable-thread-safe-queue). Two more things to keep in mind: every thread pays the memory for its own copy, and in a [thread pool](../Chapter3/thread_pools.md) — where worker threads are reused across many tasks — a `thread_local` written by one task is still there when the next task runs on the same worker. Treat that as leftover state, not a feature.
+
+The dividing line:
+
+| | Local `static` | `thread_local` |
+|---|---|---|
+| Instances | One for the whole program | One per thread |
+| Created | First time *any* thread reaches it (thread-safe since C++11) | First time *each* thread uses it |
+| Shared? | Yes — protect access like any shared data | No — nothing to protect |
+| Good for | One-time lazy set-up (config, lookup tables) | Per-thread scratch state (RNGs, buffers, caches) |
+
+---
+
 ## Summary
 
 - Two threads accessing the same data, with at least one writing and no synchronisation, is a **data race** — and a data race is **undefined behaviour**, not merely an occasional wrong answer.
@@ -291,4 +367,5 @@ Both calls can pass their accounts in either order and never deadlock. This is t
 - **Never** call `lock()`/`unlock()` by hand. Wrap the mutex in `std::lock_guard` (one mutex) or `std::scoped_lock` (one or more) so RAII releases it on every exit path.
 - Put the **data and its mutex inside a class** and expose only synchronised methods, so thread-safety is an invariant rather than a convention. Keep critical sections short.
 - **Deadlock** is two threads waiting on each other's locks forever. Avoid it by locking mutexes in a **consistent order**, or by acquiring multiple mutexes together with `std::scoped_lock`.
+- A local **`static`** is one lazily-created instance for the whole program: its *initialization* is thread-safe (C++11), but every use after that is ordinary shared access. **`thread_local`** gives each thread its own instance — no sharing, no race, no lock. The cheapest synchronisation is not sharing at all.
 - Mutexes solve *mutual exclusion*. When a thread instead needs to **wait for something to become true**, that is a job for a [condition variable](condition_variables.md) — the next chapter.

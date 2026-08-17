@@ -29,6 +29,7 @@ A quick reference for the vocabulary used throughout this book. Each term links 
 | **Spurious wakeup** | A `wait` returning without a notify — why you always re-check the predicate. ([Condition Variables](Chapter2/condition_variables.md)) |
 | **Semaphore** | A counting permit controlling access by up to N threads (C++20). ([Condition Variables](Chapter2/condition_variables.md)) |
 | **Atomic** | A variable whose operations are indivisible and data-race-free, without a lock. ([Atomics](Chapter2/atomics.md)) |
+| **`thread_local`** | Storage giving each thread its own instance of a variable — no sharing, so no race. ([Sharing Data](Chapter2/sharing_data.md)) |
 | **Busy-wait / spinlock** | Looping to check a condition instead of sleeping — wastes a CPU core. |
 
 ## Asynchronous and real-time

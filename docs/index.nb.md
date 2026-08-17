@@ -20,7 +20,7 @@ Boken følger emnets oppbygning:
 |-----|----------------|
 | **1. Moderne C++-verktøykasse** | Språkfunksjonene samtidighet og kommunikasjon hviler på: eierskap, flyttesemantikk, smartpekere, maler, lambda-uttrykk og `std::chrono`. |
 | **2. Grunnleggende samtidighet** | Prosesser og tråder, kappløpssituasjoner, mutexer, tilstandsvariabler og atomære operasjoner — å dele data uten å ødelegge dem. |
-| **3. Asynkront og sanntid** | Futures, trådbasseng, parallelle algoritmer, korutiner, og å overholde tidsfrister i et sanntidssystem. |
+| **3. Strukturering av samtidig arbeid** | Futures, trådbasseng, parallelle algoritmer, korutiner, og å overholde tidsfrister i et sanntidssystem. |
 | **4. Datakommunikasjon** | Serialisering, sockets, TCP/UDP, serielinjer, Modbus, og mønstre på høyere nivå som MQTT og RPC. |
 | **5. Bygge større prosjekter** | CMake med flere mål, tredjepartsavhengigheter med vcpkg, og å bygge bro mellom C++ og Python. |
 | **6. Datasyn** | OpenCV i C++, kamerakalibrering, dyp datasyn og YOLO, modellutrulling på enheten med ONNX, og virtuelle miljøer. |

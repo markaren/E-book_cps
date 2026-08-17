@@ -308,7 +308,82 @@ Make the worker reliably stop by changing **one type**. Build with optimisations
 
 ---
 
-## 6. A producer/consumer with clean shutdown
+## 6. One generator per thread
+
+*Practises: [Sharing Data](sharing_data.md#one-instance-or-one-per-thread-local-static-and-thread_local)*
+
+This simulated sensor adds Gaussian noise to a true value. To avoid re-seeding a `std::mt19937` on every call, the author made it `static` — one generator, lazily created, reused forever. Then the simulation went multi-threaded:
+
+<!-- no-ce -->
+```cpp
+#include <iostream>
+#include <random>
+#include <thread>
+#include <vector>
+
+double readSensorSim(double trueValue) {
+    static std::mt19937 gen{std::random_device{}()};   // ONE generator, shared by all threads
+    std::normal_distribution<double> noise{0.0, 0.1};
+    return trueValue + noise(gen);                     // every draw MUTATES gen → data race
+}
+
+int main() {
+    std::vector<std::jthread> threads;
+    for (int t = 0; t < 4; ++t) {
+        threads.emplace_back([] {
+            double sum = 0.0;
+            for (int i = 0; i < 100'000; ++i) {
+                sum += readSensorSim(20.0);
+            }
+            std::cout << "mean = " << (sum / 100'000) << "\n";
+        });
+    }
+}
+```
+
+Run it. The output looks *perfectly healthy* — four means close to `20`. It is still undefined behaviour: drawing from a `std::mt19937` mutates its internal state, so four threads share-and-write one object with no synchronisation. Unlike the broken counter, a scrambled generator still produces plausible numbers, so nothing in the output will ever warn you.
+
+Fix it by changing **one keyword**. Then explain to yourself why a mutex around the draw would also be "correct" but a worse fix here.
+
+> Hint: nothing about the generator actually needs to be *shared* — each thread just needs *a* generator. `thread_local` gives every thread its own instance, created and seeded on that thread's first call: no sharing, no race, no lock. A mutex would fix the race too, but it would serialise all four threads through one lock on every single draw — the parallelism would evaporate, as in exercise 3.
+
+??? success "Show solution"
+
+    <div class="spoiler" markdown title="Click to reveal">
+
+    ```cpp
+    #include <iostream>
+    #include <random>
+    #include <thread>
+    #include <vector>
+
+    double readSensorSim(double trueValue) {
+        thread_local std::mt19937 gen{std::random_device{}()};   // one generator PER THREAD
+        std::normal_distribution<double> noise{0.0, 0.1};
+        return trueValue + noise(gen);                           // mutates this thread's own gen
+    }
+
+    int main() {
+        std::vector<std::jthread> threads;
+        for (int t = 0; t < 4; ++t) {
+            threads.emplace_back([] {
+                double sum = 0.0;
+                for (int i = 0; i < 100'000; ++i) {
+                    sum += readSensorSim(20.0);
+                }
+                std::cout << "mean = " << (sum / 100'000) << "\n";   // ≈ 20, and race-free
+            });
+        }
+    }
+    ```
+
+    Swapping `static` for `thread_local` keeps everything the author wanted — the generator is still created once (per thread) and still avoids re-seeding on every call — but each thread now mutates its *own* object, so there is nothing shared and nothing to protect. Each copy seeds itself from `std::random_device` on that thread's first call, so the four streams are independent too. A `std::mutex` around the draw is the other correct fix, but it turns a lock-free hot path into four threads queueing for one lock, like the shared accumulator in exercise 3 — correctness at the price of the parallelism you came for. The lesson from the chapter's [`static` vs `thread_local`](sharing_data.md#one-instance-or-one-per-thread-local-static-and-thread_local) table: per-thread scratch state is exactly what `thread_local` is for. And remember what the broken version teaches: **a data race does not owe you weird output** — this one hides in numbers that look right, which is why the sanitizer below, not your eyes, is the tool for finding it.
+
+    </div>
+
+---
+
+## 7. A producer/consumer with clean shutdown
 
 *Practises: [Condition Variables](condition_variables.md)*
 
@@ -349,7 +424,7 @@ Use the `ThreadSafeQueue<T>` from [A reusable thread-safe queue](condition_varia
 
 ## Running the concurrency exercises under a sanitizer
 
-Exercise 2 (the thread-safe log) is worth running twice: once as written, and once with the mutex deliberately **removed** so the `push_back`s race. Built with **ThreadSanitizer** the racy version is caught red-handed — TSan prints the two conflicting accesses and their stack traces, turning an invisible timing bug into a concrete report. On WSL2 (or any Linux/Pi toolchain) build with `-fsanitize=thread -g` and run:
+Exercise 2 (the thread-safe log) is worth running twice: once as written, and once with the mutex deliberately **removed** so the `push_back`s race. Built with **ThreadSanitizer** the racy version is caught red-handed — TSan prints the two conflicting accesses and their stack traces, turning an invisible timing bug into a concrete report. The broken `static` version of exercise 6 is an even better target: its output looks completely healthy, so TSan is the only witness you have — run it and watch the race surface anyway. On WSL2 (or any Linux/Pi toolchain) build with `-fsanitize=thread -g` and run:
 
 ```bash
 g++ -std=c++20 -fsanitize=thread -g -pthread log.cpp -o log && ./log

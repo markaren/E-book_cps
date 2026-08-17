@@ -100,7 +100,7 @@ plugins:
             Sharing Data: Deling av data
             Condition Variables: Tilstandsvariabler
             Atomics: Atomære operasjoner
-            "3. Asynchronous & Real-Time": "3. Asynkront og sanntid"
+            "3. Structuring Concurrent Work": "3. Strukturering av samtidig arbeid"
             Futures & Promises: Futures og promises
             Thread Pools: Trådbasseng
             Parallel Algorithms: Parallelle algoritmer
@@ -166,7 +166,7 @@ nav:
     - Condition Variables: Chapter2/condition_variables.md
     - Atomics: Chapter2/atomics.md
     - Exercises: Chapter2/exercises.md
-  - 3. Asynchronous & Real-Time:
+  - 3. Structuring Concurrent Work:
     - Futures & Promises: Chapter3/futures.md
     - Thread Pools: Chapter3/thread_pools.md
     - Parallel Algorithms: Chapter3/parallel_algorithms.md

@@ -20,7 +20,7 @@ The book follows the arc of the course:
 |------|----------------|
 | **1. Modern C++ Toolkit** | The language features concurrency and communication lean on: ownership, move semantics, smart pointers, templates, lambdas, and `std::chrono`. |
 | **2. Concurrency Fundamentals** | Processes and threads, race conditions, mutexes, condition variables and atomics — sharing data without corrupting it. |
-| **3. Asynchronous & Real-Time** | Futures, thread pools, parallel algorithms, coroutines, and meeting deadlines in a real-time system. |
+| **3. Structuring Concurrent Work** | Futures, thread pools, parallel algorithms, coroutines, and meeting deadlines in a real-time system. |
 | **4. Data Communication** | Serialization, sockets, TCP/UDP, serial lines, Modbus, and higher-level patterns like MQTT and RPC. |
 | **5. Building Larger Projects** | Multi-target CMake, third-party dependencies with vcpkg, and bridging C++ with Python. |
 | **6. Computer Vision** | OpenCV in C++, camera calibration, deep vision and YOLO, on-device model deployment with ONNX, and virtual environments. |
