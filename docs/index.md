@@ -2,7 +2,7 @@
 
 Welcome to the e-book for the course [AIS2203 — Computer Engineering for Cyber-Physical Systems](https://www.ntnu.no/studier/emner/AIS2203#tab=omEmnet).
 
-This book is about making programs do **more than one thing at once**, and making programs on **different machines talk to each other**. Those two ideas — concurrency and communication — are what turn a single-file exercise into a robot that reads its sensors, runs a control loop, streams telemetry to an operator, and reacts to commands: all at the same time, and all on time. The semester project makes this concrete: you build a 3D simulator with physics, a car, and sensors, then connect it to the **ROS2** robot middleware — and present the result at the oral exam.
+This book is about making programs do **more than one thing at once**, and making programs on **different machines talk to each other**. Those two ideas — concurrency and communication — are the difference between a classroom exercise and a real system: a robot reads its sensors, runs a control loop, streams telemetry to an operator, and reacts to commands — all at the same time, and all on time. The semester project makes this concrete: you build a 3D simulator with physics, a car, and sensors, then connect it to the **ROS2** robot middleware — and present the result at the oral exam.
 
 Use the sidebar to navigate, or jump straight to a topic with the search box above. New here? Start with [Getting Started](getting_started.md), then read [From AIS1003 to AIS2203](from_ais1003.md) to see what this course assumes you already know.
 

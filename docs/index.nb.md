@@ -2,7 +2,7 @@
 
 Velkommen til e-boken for emnet [AIS2203 — Datateknikk for kyberfysiske systemer](https://www.ntnu.no/studier/emner/AIS2203#tab=omEmnet).
 
-Denne boken handler om å få programmer til å gjøre **mer enn én ting om gangen**, og om å få programmer på **ulike maskiner til å snakke sammen**. Disse to ideene — samtidighet og kommunikasjon — er det som gjør en enkeltstående øvingsoppgave om til en robot som leser sensorene sine, kjører en reguleringssløyfe, strømmer telemetri til en operatør og reagerer på kommandoer: alt samtidig, og alt i tide. Semesterprosjektet gjør dette konkret: du bygger en 3D-simulator med fysikk, en bil og sensorer, og kobler den deretter til robotmellomvaren **ROS2** — og presenterer resultatet på den muntlige eksamenen.
+Denne boken handler om å få programmer til å gjøre **mer enn én ting om gangen**, og om å få programmer på **ulike maskiner til å snakke sammen**. Disse to ideene — samtidighet og kommunikasjon — er forskjellen på en øvingsoppgave og et virkelig system: en robot leser sensorene sine, kjører en reguleringssløyfe, strømmer telemetri til en operatør og reagerer på kommandoer — alt samtidig, og alt i tide. Semesterprosjektet gjør dette konkret: du bygger en 3D-simulator med fysikk, en bil og sensorer, og kobler den deretter til robotmellomvaren **ROS2** — og presenterer resultatet på den muntlige eksamenen.
 
 Bruk sidemenyen til å navigere, eller hopp rett til et emne med søkefeltet øverst. Ny her? Begynn med [Kom i gang](getting_started.md), og les deretter [Fra AIS1003 til AIS2203](from_ais1003.md) for å se hva emnet forutsetter at du allerede kan.
 
