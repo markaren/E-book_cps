@@ -50,7 +50,7 @@ Your program runs from its **working directory**, which in CLion is the *build* 
 
 ### How is the semester project assessed?
 
-At an **oral exam**: you present the system you built — the simulator, the concurrency architecture, the communication, the ROS2 integration — and answer questions about *why* it is built the way it is. [Presenting Your Project](presenting.md) is the checklist for being ready; read it well before exam week, not the night before. For dates and formalities, see the course page on Blackboard/NTNU's course description.
+At an **oral exam**: you present the system you built — the simulator, the concurrency architecture, the communication, the ROS2 integration — and answer questions about *why* it is built the way it is. [Presenting Your Project](presenting.md) is the checklist for being ready; read it well before exam week, not the night before. For dates and formalities, see the course page on Canvas/NTNU's course description.
 
 ### Do I need a Raspberry Pi or other hardware?
 
