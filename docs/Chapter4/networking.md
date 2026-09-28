@@ -27,20 +27,23 @@ For most course work you do not need an industrial async framework — you need 
 <!-- no-ce -->
 ```cpp
 #include <simple_socket/TCPSocket.hpp>
+#include <array>
+#include <cstdint>
 #include <iostream>
-#include <string>
 
 using namespace simple_socket;
 
 int main() {
     TCPServer server(8080);                       // claim port 8080 and listen
-    std::cout << "listening on port 8080...\n";
+    std::cout << "listening on port 8080..." << std::endl;  // endl flushes before we block
 
     auto conn = server.accept();                  // block until a client connects
 
-    std::string buffer(1024, '\0');
+    std::array<std::uint8_t, 1024> buffer{};      // raw bytes, not text
     int n = conn->read(buffer);                   // read whatever arrived
-    conn->write(std::vector<unsigned char>(buffer.begin(), buffer.begin() + n));  // echo it back
+    if (n > 0) {
+        conn->write(buffer.data(), n);            // echo exactly those n bytes back
+    }
     // conn and server close themselves via RAII
 }
 ```
@@ -50,6 +53,8 @@ int main() {
 <!-- no-ce -->
 ```cpp
 #include <simple_socket/TCPSocket.hpp>
+#include <array>
+#include <cstdint>
 #include <iostream>
 #include <string>
 
@@ -58,17 +63,23 @@ using namespace simple_socket;
 int main() {
     TCPClientContext ctx;
     auto conn = ctx.connect("127.0.0.1", 8080);   // reach out to the server
+    if (!conn) {                                  // nullptr: nobody is listening
+        std::cerr << "no server on 127.0.0.1:8080\n";
+        return 1;
+    }
 
     conn->write("hello");
 
-    std::string buffer(1024, '\0');
+    std::array<std::uint8_t, 1024> buffer{};
     int n = conn->read(buffer);
-    std::cout << "server replied: " << buffer.substr(0, n) << "\n";  // server replied: hello
+    if (n > 0) {                                  // the bytes, turned into text to print them
+        std::cout << "server replied: " << std::string(buffer.begin(), buffer.begin() + n) << "\n";
+    }
     // conn closes itself when it goes out of scope (RAII)
 }
 ```
 
-Run the server in one CLion configuration, the client in another, and the client prints `server replied: hello`. Compare with the [raw version](sockets.md): no `WSAStartup`, no `reinterpret_cast`, no `SOCKET`-vs-`int`, no manual `close` — and *identical* source on Windows, Linux, and the Pi. `read` returns the byte count (a `read` may return fewer bytes than a full message — the [framing](serialization.md) problem again; `readExact` loops until a known number of bytes arrive). SimpleSocket also bundles a [Modbus TCP](modbus.md) client and an optional [MQTT](mqtt_rpc.md) client, which is why the next chapters lean on it. For a robot streaming telemetry to a laptop, this is usually all you need.
+Run the server in one CLion configuration, the client in another, and the client prints `server replied: hello`. Compare with the [raw version](sockets.md): no `WSAStartup`, no `reinterpret_cast`, no `SOCKET`-vs-`int`, no manual `close` — and *identical* source on Windows, Linux, and the Pi. `read` fills a buffer of **bytes** (`std::uint8_t`) and returns how many arrived, or a value of `0` or less when the connection closed or failed — so check it before you use the bytes (a `read` may also return fewer bytes than a full message — the [framing](serialization.md) problem again; `readExact` loops until a known number of bytes arrive). SimpleSocket also bundles a [Modbus TCP](modbus.md) client and an optional [MQTT](mqtt_rpc.md) client, which is why the next chapters lean on it. For a robot streaming telemetry to a laptop, this is usually all you need.
 
 ---
 
