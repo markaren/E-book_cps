@@ -50,9 +50,9 @@ Knowing your system's failure behaviour — and having *chosen* it — is a stro
 
 ---
 
-## Let your git history be your evidence
+## Use git for your own sake
 
-A **commit-per-milestone** history is a timeline of your work an examiner can trust: "added the physics loop", "wired the sensor onto a topic", "fixed the race on `RobotState`". It shows the project grew incrementally and by your hand — evidence that the understanding is yours, not [pasted in wholesale from an assistant](using_ai.md). Commit as you reach each working milestone, with messages that say *what changed and why*. Under questioning, `git log` is a story you can walk the examiner through.
+The examiners do not open your repository — everything they know about the project is what you present. Git is still worth the discipline, for two reasons of your own. A **commit-per-milestone** history — "added the physics loop", "wired the sensor onto a topic", "fixed the race on `RobotState`" — is a safety net: the version that worked yesterday is what you demo when today's change breaks the build the night before the exam. And it is the raw material for the presentation: `git log` is the story of how the project grew, and a presentation that follows that story ("first the loop, then the sensor, then the race we found and fixed") is easy to give and easy to follow. Commit as you reach each working milestone, with messages that say *what changed and why*.
 
 ---
 
@@ -62,4 +62,4 @@ A **commit-per-milestone** history is a timeline of your work an examiner can tr
 - Bring an **architecture diagram** and a **threading diagram** (mark every lock and queue) — drawn in advance.
 - Be ready to justify **every lock, every `std::move`, every [QoS](Chapter7/ros2_concepts.md) choice, every rate** — with the alternative you rejected and why.
 - **Rehearse the data-journey** question (physics loop → screen/subscriber) until fluent, and **demo a failure mode** live (kill the publisher — know what your subscriber does).
-- Keep a **commit-per-milestone** git history as your evidence trail.
+- Keep a **commit-per-milestone** git history — not for the examiners, who never see it, but as your safety net and the outline of your presentation.
