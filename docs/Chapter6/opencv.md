@@ -21,7 +21,20 @@ target_link_libraries(vision PRIVATE ${OpenCV_LIBS})
 ```
 
 !!! warning "OpenCV builds from source — start it early"
-    On Windows, vcpkg **compiles OpenCV from source**, which takes **30–60+ minutes and several GB** of disk the first time (it pulls in many transitive dependencies). Trigger the build **before** the lab, not during it — the first `cmake` configure after adding `opencv` is when it happens. If you do not need the full library, request a **trimmed feature set** (e.g. `opencv[core,imgproc,imgcodecs]` in the manifest) to cut the build down substantially.
+    On Windows, vcpkg **compiles OpenCV from source**, which takes **30–60+ minutes and several GB** of disk the first time (it pulls in many transitive dependencies). Trigger the build **before** the lab, not during it — the first `cmake` configure after adding `opencv` is when it happens. If you do not need the full library, request a **trimmed feature set**. The basic modules (`core`, `imgproc`, `imgcodecs`, `videoio`) are always built; what you choose is the extras, by replacing the plain `"opencv"` entry in the manifest with an object that switches the default features off and lists the ones you want:
+
+    ```json
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        "highgui", "win32ui", "dshow", "jpeg", "png",
+        "calib3d", "intrinsics", "fs", "thread"
+      ]
+    }
+    ```
+
+    What this leaves out is mainly **`dnn`**, and that is where the time goes: it pulls in protobuf, which alone accounts for roughly half the build time. But `dnn` is also what [Model Deployment & ONNX](onnx.md) runs on (`cv::dnn`), so a set without it covers the **classic-vision** pages only — and adding `"dnn"` later rebuilds OpenCV, so if you are heading there anyway, build the full library once instead. Two things to get right: the object must name **`opencv4`**, the port that `opencv` merely forwards to (features listed on `opencv` leave `opencv4`'s defaults switched on, and you build everything after all); and do not trim further without checking what a feature does (`vcpkg search opencv4` lists them) — `win32ui` is the window behind `imshow` and `dshow` the webcam behind `VideoCapture` (both Windows-only; on Linux, `gtk` replaces `win32ui`), and without them the code still builds and then fails at run time.
 
 !!! note "One exception: inside a ROS2 workspace, conda owns OpenCV"
     The vcpkg advice above holds for a standalone vision project. Once your code lives in the [ROS2 workspace](../Chapter7/ros2_windows.md) (Part 7), the RoboStack **conda environment already ships OpenCV**, and pulling a second copy via vcpkg puts two differently-built OpenCV DLLs in play — the crash-and-conflict trap that chapter warns about. **One owner per library:** in the ROS2 workspace, let conda supply OpenCV and drop it from `vcpkg.json` there.
