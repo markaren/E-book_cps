@@ -60,7 +60,7 @@ Detectors produce overlapping boxes for the same object, and *non-maximum suppre
 
 *Practises: [Deep Vision](deep_vision.md), [Model Deployment & ONNX](onnx.md)*
 
-YOLO outputs each box as a **normalised centre and size**: `(cx, cy, w, h)`, all in `0..1` relative to the image. To draw or act on it you need **pixel corners** `(xmin, ymin, xmax, ymax)`. Write the conversion for a given image width and height.
+A YOLO **label file** — the training data you annotate — stores each box as a **normalised centre and size**: `(cx, cy, w, h)`, all in `0..1` relative to the image. To draw a labelled box, or compare it with a detection, you need **pixel corners** `(xmin, ymin, xmax, ymax)`. Write the conversion for a given image width and height.
 
 > Hint: the top-left corner is `(cx − w/2, cy − h/2)`, still normalised; multiply by the image dimensions to get pixels. The box width in pixels is `w * imageWidth`.
 
@@ -90,7 +90,7 @@ YOLO outputs each box as a **normalised centre and size**: `(cx, cy, w, h)`, all
     }
     ```
 
-    Converting centre+size to corner+size, then scaling normalised coordinates by the image dimensions, is exactly the post-processing every YOLO deployment does between `net.forward()` and drawing a box. Getting it wrong — forgetting the `/2`, or mixing up normalised and pixel units — is the classic "the model works but the boxes are in the wrong place" bug from [Model Deployment](onnx.md).
+    Converting centre+size to corners is also the first step of a deployment's post-processing after `net.forward()`. There, though, the four numbers come out in **pixels of the model's input** (e.g. the 640 × 640 letterboxed image), not in `0..1`: instead of multiplying by the image size you divide by the resize scale ([Model Deployment](onnx.md)). Getting it wrong — forgetting the `/2`, or mixing up normalised and pixel units — is the classic "the model works but the boxes are in the wrong place" bug.
 
     </div>
 

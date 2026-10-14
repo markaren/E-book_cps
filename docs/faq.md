@@ -44,6 +44,10 @@ Its **reference count is** — copying/destroying `shared_ptr`s across threads i
 
 Use **[vcpkg](Chapter5/dependencies.md)**: declare it in `vcpkg.json`, configure CMake with vcpkg's toolchain file, then `find_package` + `target_link_libraries`. For one or two dependencies, CMake's [`FetchContent`](Chapter5/cmake.md) also works.
 
+### `ld.exe: cannot find …` although the file is there, and my path has æ, ø or å in it.
+
+Keep your projects in a folder whose path has only plain letters, such as `C:\dev\…`. CLion's bundled MinGW **linker** cannot open files under a path like `C:\Users\Bjørn\CLionProjects`, so a [vcpkg](Chapter5/dependencies.md) project there fails to link (`ld.exe: cannot find …/vcpkg_installed/x64-mingw-static/lib/libtiff.a: No such file or directory`), and some libraries refuse such paths at run time as well. If your Windows user folder (`C:\Users\…`) contains one of these letters, so does CLion's default `CLionProjects` folder — choose another location.
+
 ### Where did my output file (or `readings.txt`) go?
 
 Your program runs from its **working directory**, which in CLion is the *build* folder (e.g. `cmake-build-debug/`), not your project folder. That is where output files appear and where input files are looked for — put them there or set the working directory under **Run → Edit Configurations**.

@@ -48,7 +48,8 @@ With OpenCV's `dnn` module, loading and running an ONNX model is a few lines (ne
 cv::dnn::Net net = cv::dnn::readNetFromONNX("yolo.onnx");   // load the portable model
 
 cv::Mat detect(cv::dnn::Net& net, const cv::Mat& frame) {
-    // Pre-process: resize to the model's input size, scale to 0..1, BGR→RGB, NCHW layout
+    // Pre-process: stretch to the model's input size, scale to 0..1, BGR→RGB, NCHW layout
+    // (simplest form; the letterbox tip below matches training more closely)
     cv::Mat blob = cv::dnn::blobFromImage(
         frame, 1.0 / 255.0, cv::Size(640, 640), cv::Scalar(), /*swapRB=*/true);
 
@@ -60,8 +61,23 @@ cv::Mat detect(cv::dnn::Net& net, const cv::Mat& frame) {
 Three things to get right when deploying a model, all from the export side:
 
 - **Input size** (`imgsz`, e.g. 640×640) must match what the model was exported for — the lecture's export parameters exist for exactly this.
-- **Pre-processing must mirror training**: the same scaling (often `1/255`), the same channel order (models usually want RGB, so `swapRB=true` because OpenCV is [BGR](opencv.md)), the same layout.
-- **Post-processing** parses the raw output tensor into boxes, scores, and class IDs, then applies *non-maximum suppression* (`cv::dnn::NMSBoxes`) to remove overlapping duplicate boxes.
+- **Pre-processing must mirror training**: the same resizing, the same scaling (often `1/255`), the same channel order (models usually want RGB, so `swapRB=true` because OpenCV is [BGR](opencv.md)), the same layout. The resizing is the easy one to miss: Ultralytics **letterboxes** its images — scaled to fit with the aspect ratio kept, the rest padded with gray — while the one-liner above *stretches* the frame to a square. That usually still finds the objects; the tip below matches training.
+- **Post-processing** parses the raw output tensor into boxes, scores, and class IDs, then applies *non-maximum suppression* to remove overlapping duplicate boxes (`cv::dnn::NMSBoxesBatched` does it per class; `cv::dnn::NMSBoxes` ignores the class, so a person on a bicycle can lose one of its two boxes). For a YOLOv8/YOLO11/YOLO26 model exported with Ultralytics' defaults the output is `1 × 84 × 8400`: 8400 candidate boxes, stored one per **column** (transpose before reading rows), each `cx, cy, w, h` in pixels of the 640 × 640 input followed by 80 class scores. YOLO26 exported with `nms=False` instead returns `1 × 300 × 6` finished boxes (`x1, y1, x2, y2, score, class`) that need no NMS. Export options and library versions change this, so **print the output shape** before writing the parser.
+
+!!! tip "Letterbox, as in training"
+    Shrink the frame to fit 640 × 640 with its aspect ratio kept, pad the rest with gray (114, as Ultralytics does), and keep the scale: the output's boxes are in pixels of that padded 640 × 640 image, so divide them by `scale` to get back to frame pixels.
+
+    <!-- no-ce -->
+    ```cpp
+    const float scale = std::min(640.0f / frame.cols, 640.0f / frame.rows);
+    cv::Mat resized, square;
+    cv::resize(frame, resized, cv::Size(), scale, scale);
+    cv::copyMakeBorder(resized, square, 0, 640 - resized.rows, 0, 640 - resized.cols,
+                       cv::BORDER_CONSTANT, cv::Scalar(114, 114, 114));   // pad right and bottom
+    cv::Mat blob = cv::dnn::blobFromImage(square, 1.0 / 255.0, cv::Size(), cv::Scalar(), /*swapRB=*/true);
+    ```
+
+    Ultralytics centres the image; padding only the right and bottom keeps the way back a single division and finds the same objects.
 
 Get the pre/post-processing wrong and the model runs but returns nonsense — the most common deployment bug, and why matching the export configuration matters.
 
@@ -124,6 +140,6 @@ The same pipeline runs whether its frames come from the [simulator](virtual_envi
 
 - A model trained in a Python framework must be **detached from that framework** to run on the robot. **ONNX** is the portable, framework-agnostic format that makes this possible: **train in Python → export to `.onnx` → run in C++**.
 - ONNX gives **interoperability, optimised inference, and portability**; run it in C++ with **OpenCV's `dnn` module** (simplest — you already link OpenCV) or **ONNX Runtime** (with TensorRT/OpenVINO acceleration).
-- Inference correctness hinges on **matching the export configuration**: input size, pre-processing (scale, `swapRB` for [BGR→RGB](opencv.md)), and post-processing (parse output + non-maximum suppression).
+- Inference correctness hinges on **matching the export configuration**: input size, pre-processing (letterbox, scale, `swapRB` for [BGR→RGB](opencv.md)), and post-processing (parse output + non-maximum suppression).
 - Run capture and inference on **separate threads** joined by a [thread-safe queue](../Chapter2/condition_variables.md) so vision never stalls control — and **drop stale frames** to stay [real-time](../Chapter3/real_time.md).
 - The same pipeline runs against the [simulator](virtual_environments.md) or a real device; on hardware, size the model to the device or offload over the [network](../Chapter4/sockets.md) (running on a board is background — see [Embedded Linux](../embedded_linux.md)). Next: [Virtual Environments](virtual_environments.md), for testing and generating data.
