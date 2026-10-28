@@ -16,7 +16,7 @@ The environment is managed with **pixi**, a modern conda-compatible project tool
 
 Follow the course's [`ROBOSTACK.md`](https://github.com/markaren/ros2_moveit_ur_demo/blob/main/doc/ROBOSTACK.md) for the authoritative steps; the shape is:
 
-1. **Install pixi**, then create the pixi project at **`C:\robostack`** (place the `pixi.toml` there). The environment is named **`jazzy`**.
+1. **Install pixi**, then create the pixi project at **`C:\robostack`** (place the `pixi.toml` there). The environment is named **`jazzy`**. The short path matters, here and for any project that keeps its own pixi environment: with a space anywhere in the path (your user name, `OneDrive - NTNU`), every `ros2` command fails with `failed to create process.`, and past about 260 characters MSVC cannot open ROS's deeper headers.
 2. **Enter the environment** — this is the ROS2 equivalent of "sourcing setup.bash":
 
     ```powershell

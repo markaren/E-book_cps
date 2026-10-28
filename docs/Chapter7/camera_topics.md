@@ -88,10 +88,13 @@ The payoff of the graph is that **tools you did not write** can consume your cam
 ```powershell
 ros2 topic hz /camera/image/compressed     # is it really 20 Hz?
 ros2 topic bw /camera/image/compressed     # how many bytes/s is the JPEG stream?
-ros2 run rqt_image_view rqt_image_view     # pick the topic — your car's view, live
+rviz2                                      # Add → Image, Topic: /camera/image/compressed
 ```
 
-`rqt_image_view` decodes and displays compressed topics directly. Watching your own simulator's camera in a stock ROS2 tool, with zero code, is the "adopting the conventions buys the ecosystem" argument from [concepts](ros2_concepts.md) made visible.
+RViz's **Image** display decodes compressed topics directly: it picks the decoder from the `/compressed` at the end of the topic name, provided the compressed image transport is installed (see the tip below). Watching your own simulator's camera in a stock ROS2 tool, with zero code, is the "adopting the conventions buys the ecosystem" argument from [concepts](ros2_concepts.md) made visible.
+
+!!! warning "`rqt_image_view` on Windows"
+    Many tutorials use `ros2 run rqt_image_view rqt_image_view`, a lighter viewer for the same job. It works on Ubuntu, but RoboStack's Windows package of it is empty, so on Windows the command answers `No executable found`. Use RViz there.
 
 ---
 
@@ -124,8 +127,8 @@ Note the **stamp**: it is the *image's* timestamp, not `now()`. A detection desc
 
 Detections are small and low-rate, so QoS matters less here — the default (reliable, keep-last 10) is fine; the freshness argument bites on the megabyte-scale image stream, not on a handful of boxes. And reusing the standard type instead of inventing your own is the [`.msg` reuse rule](ros2_concepts.md) paying out: `rqt`, `ros2 bag`, and anyone else's node already understand a `Detection2DArray`.
 
-!!! tip "Adding `vision_msgs` to the toolchain"
-    `vision_msgs` is its own package: add `ros-jazzy-vision-msgs` to the [RoboStack environment](ros2_windows.md)'s `pixi.toml`, then declare `vision_msgs` in your package's `package.xml` and `CMakeLists.txt` like any other dependency.
+!!! tip "Adding `vision_msgs` and the compressed image transport to the toolchain"
+    Two packages this page needs are not part of RoboStack's `ros-jazzy-desktop`: `ros-jazzy-vision-msgs` (the detection messages) and `ros-jazzy-compressed-image-transport` (lets viewers such as RViz decode JPEG topics). Add both to the [RoboStack environment](ros2_windows.md)'s `pixi.toml`; on Ubuntu, `apt install` the same names. Then declare `vision_msgs` in your package's `package.xml` and `CMakeLists.txt` like any other dependency. The transport is a plugin that viewers load at run time, so your packages do not declare it.
 
 ---
 
@@ -134,5 +137,5 @@ Detections are small and low-rate, so QoS matters less here — the default (rel
 - Networked images ride **`sensor_msgs/CompressedImage`** — [Part 4's JPEG bytes](../Chapter4/serialization.md#streaming-images) in a typed envelope (`header`, `format`, `data`); `cv::imencode` fills `msg.data` directly, no `cv_bridge` needed.
 - Publish with **`rclcpp::SensorDataQoS()`** — best-effort, keep-last: the [exercise 1](exercises.md) judgement, available as a named profile.
 - The executor runs on **its own `std::jthread`** beside the render loop; the **`Mailbox`** is the only shared state between them — [Part 2's rules](../Chapter2/sharing_data.md) at the boundary.
-- Verify with **`ros2 topic hz`/`bw`**, and watch live in **`rqt_image_view`** — stock tools consuming your simulator is the ecosystem payoff.
+- Verify with **`ros2 topic hz`/`bw`**, and watch live in **RViz** (or `rqt_image_view` on Ubuntu) — stock tools consuming your simulator is the ecosystem payoff.
 - Publish detections as **`vision_msgs/Detection2DArray`**, stamped with the **image's** time, so boxes stay paired with the frames they describe. Next: the [exercises](exercises.md).
