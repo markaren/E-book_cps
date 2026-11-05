@@ -374,7 +374,7 @@ target_include_directories(vecmath PRIVATE include)
 ```
 
 !!! tip "Getting pybind11 from `pip` instead of vcpkg"
-    pybind11 is also a `pip` package, and that route has one big advantage: the module is guaranteed to be built against the Python you will run it with. The vcpkg port, by contrast, depends on vcpkg's own `python3` port — so the first configure builds a complete CPython (and OpenSSL) from source, taking many minutes, and the module then binds to *that* interpreter rather than the one on your `PATH`.
+    pybind11 is also a `pip` package, and that route has one big advantage: the module is guaranteed to be built against the Python you will run it with. The vcpkg port, by contrast, depends on vcpkg's own `python3` port — so the first configure builds a complete CPython (and OpenSSL) from source, which took close to half an hour on a laptop — and the Python the module binds to is simply whichever one CMake finds first, which may not be the one you run.
 
     ```bash
     pip install pybind11
